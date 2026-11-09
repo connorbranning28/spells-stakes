@@ -1,0 +1,5090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spells & Stakes: 10-World Wizard Odyssey</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pixel-font: 'Press Start 2P', monospace;
+    --retro-body: 'VT323', monospace;
+  }
+  * {
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #06070b;
+    font-family: var(--retro-body);
+    color: #f8fafc;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    cursor: crosshair;
+  }
+  .pixel-font {
+    font-family: var(--pixel-font);
+  }
+  .retro-border {
+    border: 4px solid #475569;
+    box-shadow: inset 0 0 0 4px #0f172a, 0 8px 0 rgba(0,0,0,0.65);
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  }
+  .gold-border {
+    border: 4px solid #f59e0b;
+    box-shadow: inset 0 0 0 4px #451a03, 0 8px 0 rgba(0,0,0,0.75);
+    background: linear-gradient(180deg, #271705 0%, #140b02 100%);
+  }
+  .royal-border {
+    border: 4px solid #c084fc;
+    box-shadow: inset 0 0 0 4px #2e1065, 0 10px 0 rgba(0,0,0,0.85);
+    background: linear-gradient(180deg, #2e1065 0%, #090418 100%);
+  }
+  .felt-table {
+    border: 4px solid #fbbf24;
+    box-shadow: inset 0 0 24px rgba(0,0,0,0.8);
+    background: radial-gradient(circle, #065f46 0%, #022c22 100%);
+  }
+  .pixel-btn {
+    font-family: var(--pixel-font);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    padding: 9px 13px;
+    border: 3px solid #cbd5e1;
+    box-shadow: inset -3px -3px 0px rgba(0,0,0,0.45), 0 4px 0 #020617;
+    transition: transform 0.08s, filter 0.1s;
+    cursor: pointer;
+  }
+  .pixel-btn:hover:not(:disabled) {
+    filter: brightness(1.15);
+    transform: translateY(-2px);
+  }
+  .pixel-btn:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: inset 2px 2px 0px rgba(0,0,0,0.6), 0 1px 0 #020617;
+  }
+  .pixel-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .playing-card {
+    width: 66px;
+    height: 94px;
+    background: #fffbeb;
+    border: 3px solid #1e293b;
+    border-radius: 6px;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 4px 6px;
+    font-family: var(--pixel-font);
+    cursor: pointer;
+    transition: transform 0.12s;
+  }
+  .playing-card.held {
+    transform: translateY(-10px);
+    border-color: #f59e0b;
+    box-shadow: 0 0 12px #f59e0b;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0f172a;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #475569;
+  }
+  @keyframes pulseGlow {
+    0%, 100% { filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.7)); }
+    50% { filter: drop-shadow(0 0 14px rgba(244, 63, 94, 0.95)); }
+  }
+  .allin-glow {
+    animation: pulseGlow 1.5s infinite;
+  }
+</style>
+<!-- Safe Asynchronous Cloud Sync Imports for the Shared Feedback Wall -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+  import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+  import { getFirestore, collection, doc, addDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+  window.FirebaseSDK = {
+    initializeApp,
+    getAuth,
+    signInAnonymously,
+    signInWithCustomToken,
+    getFirestore,
+    collection,
+    doc,
+    addDoc,
+    updateDoc,
+    onSnapshot
+  };
+  if (typeof window.tryConnectCloudFeedback === 'function') {
+    window.tryConnectCloudFeedback();
+  }
+</script>
+</head>
+<body class="relative">
+
+<!-- MAIN GAME CANVAS -->
+<canvas id="gameCanvas"></canvas>
+
+<!-- ================================================================= -->
+<!-- MAIN MENU OVERLAY (CLEAN, UNCONGESTED LAYOUT)                     -->
+<!-- ================================================================= -->
+<div id="mainMenuOverlay" class="fixed inset-0 bg-slate-950/90 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+  <div class="max-w-3xl w-full gold-border p-5 sm:p-6 flex flex-col gap-5 my-auto">
+    <!-- Title Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b-2 border-amber-500/40 pb-3">
+      <div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="px-2 py-0.5 bg-amber-500/20 border border-amber-400 text-amber-300 pixel-font text-[9px]">5 WORLDS × 10 STAGES</span>
+          <span id="savedProgressBadge" class="px-2 py-0.5 bg-emerald-500/20 border border-emerald-400 text-emerald-300 pixel-font text-[9px]">FURTHEST UNLOCKED: WORLD 1-1</span>
+        </div>
+        <h1 class="pixel-font text-base sm:text-xl text-amber-400 tracking-wide mt-2">🧙‍♂️ SPELLS & STAKES</h1>
+        <p class="text-base sm:text-lg text-slate-300">Storm Troll Castles, recruit Gnome companions, and rescue Queen Aurelia!</p>
+      </div>
+      <div class="flex flex-wrap gap-2 self-start sm:self-center">
+        <button id="menuControlModeBtn" onclick="toggleControlScheme()" class="pixel-btn bg-indigo-900 text-indigo-200 border-indigo-400">
+          🎮 MODE: MOUSE + KEYBOARD
+        </button>
+        <button onclick="openCodexModal()" class="pixel-btn bg-amber-800 text-amber-200 border-amber-400">
+          🏆 CODEX & TROPHIES
+        </button>
+        <button onclick="openSettingsModal()" class="pixel-btn bg-slate-800 text-amber-300 border-amber-400">
+          ⚙️ SETTINGS
+        </button>
+      </div>
+    </div>
+
+    <!-- 1. Difficulty Selector -->
+    <div class="bg-slate-900/90 border-2 border-slate-700 p-3.5 flex flex-col gap-2">
+      <div class="flex justify-between items-center flex-wrap gap-1">
+        <span class="pixel-font text-[10px] text-amber-300">1. SELECT DIFFICULTY:</span>
+        <span id="diffCapPreview" class="text-base text-emerald-300 font-bold">Max Gnome Squad: 3 Gnomes</span>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <button onclick="selectDifficulty('easy')" data-diff="easy" class="diff-btn pixel-btn bg-emerald-800 text-white">EASY</button>
+        <button onclick="selectDifficulty('normal')" data-diff="normal" class="diff-btn pixel-btn bg-sky-800 text-white ring-2 ring-amber-400">NORMAL</button>
+        <button onclick="selectDifficulty('hard')" data-diff="hard" class="diff-btn pixel-btn bg-amber-700 text-white">HARD</button>
+        <button onclick="selectDifficulty('insane')" data-diff="insane" class="diff-btn pixel-btn bg-rose-800 text-white">INSANE</button>
+        <button onclick="selectDifficulty('nightmare')" data-diff="nightmare" class="diff-btn pixel-btn bg-purple-900 text-white">NIGHTMARE</button>
+      </div>
+      <div id="diffDescText" class="text-sm sm:text-base text-slate-300 bg-slate-950/80 px-3 py-1.5 border border-slate-800">
+        Balanced adventure. 1.0x Troll HP & Damage. +2 Trolls per Castle. Max Gnome Squad: 3 Gnomes.
+      </div>
+    </div>
+
+    <!-- 2. World (1-5) & Sublevel (1-10) Selector (Locked until visited!) -->
+    <div class="bg-slate-900/90 border-2 border-slate-700 p-3.5 flex flex-col gap-2.5">
+      <div class="flex justify-between items-center flex-wrap gap-1">
+        <span class="pixel-font text-[10px] text-cyan-300">2. SELECT WORLD & STAGE (UNLOCKS AS YOU CLEAR):</span>
+        <span id="selectedWorldLabel" class="text-base text-amber-300 font-bold">World 1-1: The Enchanted Forest</span>
+      </div>
+      <!-- 5 Main World Tabs -->
+      <div id="mainWorldTabs" class="grid grid-cols-5 gap-1.5"></div>
+      <!-- 10 Sublevels for Selected World -->
+      <div id="levelSelectGrid" class="grid grid-cols-5 sm:grid-cols-10 gap-1.5 pt-1"></div>
+    </div>
+
+    <!-- 3. Launch, Resume Save & Secondary Menu Buttons -->
+    <div class="flex flex-col sm:flex-row gap-2.5 pt-1 flex-wrap">
+      <button id="resumeSaveBtn" onclick="resumeSavedCampaign()" class="hidden pixel-btn bg-cyan-600 text-white text-xs sm:text-sm py-3.5 flex-1 ring-2 ring-amber-300">
+        💾 CONTINUE SAVED RUN
+      </button>
+      <button onclick="startCampaignFromMenu()" class="pixel-btn bg-emerald-600 text-white text-xs sm:text-sm py-3.5 flex-1 allin-glow">
+        ⚔️ NEW WIZARD ODYSSEY
+      </button>
+      <button onclick="openSaveCodeModal()" class="pixel-btn bg-cyan-800 text-cyan-100 border-cyan-400 py-3.5 px-3">
+        🔑 SAVE / LOAD CODE
+      </button>
+      <button onclick="openCodexModal()" class="pixel-btn bg-purple-800 text-amber-200 py-3.5 px-3">
+        🏆 RELICS & TROPHIES
+      </button>
+      <button onclick="openModal('feedbackModal')" class="pixel-btn bg-amber-700 text-white py-3.5 px-3">
+        📬 FEEDBACK WALL
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- MODAL: SAVE MANAGER & PORTABLE SAVE CODE (FOR GOOGLE SITES)       -->
+<!-- ================================================================= -->
+<div id="saveCodeModal" class="fixed inset-0 bg-black/85 hidden items-center justify-center z-50 p-4">
+  <div class="gold-border max-w-xl w-full p-5 text-slate-100 flex flex-col gap-4">
+    <div class="flex justify-between items-center border-b-2 border-amber-500/40 pb-2">
+      <div>
+        <h2 class="pixel-font text-xs sm:text-sm text-amber-400">💾 SAVE & LOAD CAMPAIGN</h2>
+        <p class="text-base text-slate-300">Auto-saves to your browser + portable Save Code for Google Sites & Chromebooks!</p>
+      </div>
+      <button onclick="closeModals()" class="pixel-btn bg-rose-900 text-white">X</button>
+    </div>
+
+    <!-- Current Save Status -->
+    <div class="bg-slate-900/90 border border-emerald-500/50 p-3 flex flex-col gap-2">
+      <div class="flex justify-between items-center">
+        <span class="pixel-font text-[10px] text-emerald-300">1. INSTANT BROWSER SAVE:</span>
+        <span id="browserSaveStatusBadge" class="text-sm text-amber-300 font-bold">Checking...</span>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="saveFullGameState(true)" class="pixel-btn bg-emerald-600 text-white flex-1">💾 SAVE CURRENT RUN NOW</button>
+        <button id="modalResumeBtn" onclick="resumeSavedCampaign()" class="pixel-btn bg-cyan-600 text-white flex-1">▶ RESUME SAVED RUN</button>
+      </div>
+    </div>
+
+    <!-- Portable Save Code (Works even if Google Sites blocks cookies/storage!) -->
+    <div class="bg-slate-900/90 border border-cyan-500/50 p-3 flex flex-col gap-2">
+      <div class="pixel-font text-[10px] text-cyan-300">2. PORTABLE SAVE CODE (WORKS ON ANY DEVICE):</div>
+      <p class="text-sm text-slate-300 leading-tight">
+        Google Sites embeds run inside an iframe that sometimes resets browser storage when refreshed. Copy your <strong>Save Code</strong> below to keep your progress forever!
+      </p>
+      <div class="flex gap-2">
+        <input id="exportSaveCodeInput" type="text" readonly placeholder="Click Generate Save Code..." class="bg-slate-950 border border-slate-700 px-2.5 py-1.5 text-sm text-amber-300 flex-1 font-mono focus:outline-none">
+        <button onclick="copyGeneratedSaveCode()" class="pixel-btn bg-amber-600 text-white">📋 COPY CODE</button>
+      </div>
+
+      <div class="border-t border-slate-800 pt-2 mt-1 flex flex-col gap-1.5">
+        <span class="text-sm text-cyan-200 font-bold">Paste a Save Code to Restore Your Run:</span>
+        <div class="flex gap-2">
+          <input id="importSaveCodeInput" type="text" placeholder="Paste Save Code here..." class="bg-slate-950 border border-cyan-500 px-2.5 py-1.5 text-sm text-white flex-1 font-mono focus:outline-none">
+          <button onclick="loadFromSaveCode()" class="pixel-btn bg-cyan-600 text-white">🔓 LOAD CODE</button>
+        </div>
+      </div>
+      <div id="saveCodeStatusMsg" class="text-sm text-emerald-400 hidden font-bold"></div>
+    </div>
+
+    <!-- Reset Campaign Progress Option -->
+    <div class="bg-rose-950/40 border border-rose-500/50 p-3 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="text-sm text-rose-200">
+        <span class="pixel-font text-[9px] text-rose-400">🔄 RESET CAMPAIGN DATA:</span>
+        <div>Finished the game or want a fresh start from World 1-1?</div>
+      </div>
+      <button id="resetProgressBtn" onclick="handleResetButtonClick()" class="pixel-btn bg-rose-800 text-white whitespace-nowrap">
+        🗑️ RESET PROGRESS
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- MODAL: RELIC & TROPHY CODEX + SECRET TERMINAL                     -->
+<!-- ================================================================= -->
+<div id="codexModal" class="fixed inset-0 bg-black/85 hidden items-center justify-center z-50 p-4">
+  <div class="gold-border max-w-3xl w-full p-5 text-slate-100 flex flex-col gap-4 max-h-[92vh] overflow-y-auto">
+    <div class="flex justify-between items-center border-b-2 border-amber-600/50 pb-2">
+      <div>
+        <h2 class="pixel-font text-xs sm:text-sm text-amber-400">🏆 RELIC ENCYCLOPEDIA & TROPHY ROOM</h2>
+        <p class="text-base text-slate-300">Inspect what every Relic does, view your Trophies, or enter secret codes!</p>
+      </div>
+      <button onclick="closeModals()" class="pixel-btn bg-rose-900 text-white">X</button>
+    </div>
+
+    <!-- Relic Guide -->
+    <div>
+      <h3 class="pixel-font text-[10px] text-emerald-400 mb-2">🏺 ANCIENT RELICS & STACKING EFFECTS:</h3>
+      <div id="codexRelicsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+    </div>
+
+    <!-- Trophies & Achievements -->
+    <div>
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="pixel-font text-[10px] text-amber-300">🏆 YOUR ACQUIRED TROPHIES:</h3>
+        <span id="trophyProgressCount" class="text-sm text-amber-200 font-bold">0 / 10 Unlocked</span>
+      </div>
+      <div id="codexTrophiesGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+    </div>
+
+    <!-- Secret Vault / Easter Egg Code Input -->
+    <div class="bg-slate-950 border-2 border-purple-500/60 p-3 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="text-sm text-purple-200">
+        <span class="pixel-font text-[9px] text-purple-400">🕵️ SECRET ARCHMAGE VAULT:</span>
+        <div>Know a secret password or Konami code? Type it here (or click the Moon 7 times in-game!):</div>
+      </div>
+      <div class="flex gap-2 w-full sm:w-auto">
+        <input id="secretCodeInput" type="text" maxlength="20" placeholder="Enter Code..." class="bg-slate-900 border border-purple-500 px-2.5 py-1 text-base text-amber-300 uppercase focus:outline-none">
+        <button onclick="redeemSecretCode()" class="pixel-btn bg-purple-700 text-white">UNLOCK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- FEEDBACK WALL MODAL (CLEAN SEPARATE POPUP)                        -->
+<!-- ================================================================= -->
+<div id="feedbackModal" class="fixed inset-0 bg-black/85 hidden items-center justify-center z-50 p-4">
+  <div class="retro-border max-w-xl w-full p-5 text-slate-100 flex flex-col gap-3 max-h-[90vh]">
+    <div class="flex justify-between items-center border-b-2 border-slate-700 pb-2">
+      <div>
+        <div class="flex items-center gap-2">
+          <h2 class="pixel-font text-xs sm:text-sm text-amber-400">📬 COMMUNITY FEEDBACK WALL</h2>
+          <span id="cloudSyncBadge" class="px-1.5 py-0.5 text-[9px] pixel-font bg-slate-800 text-slate-300 border border-slate-600">⚡ READY</span>
+        </div>
+        <p class="text-base text-slate-300">Share ideas for new spells, casino games, biomes, or features across devices!</p>
+      </div>
+      <button onclick="closeModals()" class="pixel-btn bg-rose-900 text-white">X</button>
+    </div>
+
+    <div class="bg-slate-900/90 border border-slate-700 p-3 flex flex-col gap-2">
+      <div class="flex gap-2">
+        <input id="fbNameInput" type="text" maxlength="20" placeholder="Your Nickname" class="bg-slate-950 border border-slate-700 px-2.5 py-1 text-base text-white w-1/2 focus:outline-none focus:border-amber-400">
+        <select id="fbCategoryInput" class="bg-slate-950 border border-slate-700 px-2 py-1 text-base text-amber-300 w-1/2 focus:outline-none">
+          <option value="✨ New Spell">✨ New Spell</option>
+          <option value="🎰 Casino Game">🎰 Casino Game</option>
+          <option value="🏰 New Biome/Boss">🏰 New Biome/Boss</option>
+          <option value="🧝 Gnome Upgrade">🧝 Gnome Upgrade</option>
+          <option value="💡 General Idea">💡 General Idea</option>
+        </select>
+      </div>
+      <textarea id="fbTextInput" rows="2" maxlength="180" placeholder="What should be added next?" class="bg-slate-950 border border-slate-700 p-2 text-base text-white focus:outline-none focus:border-amber-400 resize-none"></textarea>
+      <div class="flex gap-2">
+        <button onclick="submitFeedbackPost()" class="pixel-btn bg-amber-600 text-white flex-1">POST IDEA</button>
+        <button onclick="exportFeedbackToClipboard()" class="pixel-btn bg-slate-800 text-cyan-300" title="Copy all feedback to clipboard">📋 COPY ALL</button>
+      </div>
+      <div id="fbStatusMsg" class="text-sm text-emerald-400 hidden"></div>
+    </div>
+
+    <div id="feedbackListContainer" class="flex-1 overflow-y-auto flex flex-col gap-2 pr-1 max-h-60"></div>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- NES SUPER MARIO BROS. STYLE LEVEL TRANSITION SCREEN               -->
+<!-- ================================================================= -->
+<div id="nesTransitionOverlay" class="fixed inset-0 bg-black z-50 hidden flex-col items-center justify-center gap-6 p-6 text-center">
+  <div class="pixel-font text-xs sm:text-sm text-slate-400 tracking-widest" id="nesDifficultyBanner">NORMAL DIFFICULTY</div>
+  <div class="pixel-font text-2xl sm:text-4xl text-white tracking-wider" id="nesWorldTitle">WORLD 1-1</div>
+  <div class="pixel-font text-sm sm:text-base text-amber-400" id="nesBiomeSubtitle">🌲 THE ENCHANTED FOREST</div>
+
+  <!-- Pixel Wizard + Gnome Squad Icon Row -->
+  <div class="flex items-center justify-center gap-6 my-4 bg-slate-900/90 border-2 border-slate-700 px-8 py-5">
+    <div class="text-4xl">🧙‍♂️</div>
+    <div class="pixel-font text-lg text-white">×</div>
+    <div class="pixel-font text-xl text-amber-300" id="nesLivesText">120 HP</div>
+    <div class="h-8 w-0.5 bg-slate-700 mx-2"></div>
+    <div class="text-3xl">🧝</div>
+    <div class="pixel-font text-sm text-emerald-400" id="nesGnomeCount">0 / 3</div>
+  </div>
+
+  <p id="nesBiomeLore" class="text-xl text-slate-300 max-w-lg"></p>
+</div>
+
+<!-- ================================================================= -->
+<!-- TOP HUD OVERLAY                                                   -->
+<!-- ================================================================= -->
+<div class="fixed top-0 left-0 right-0 pointer-events-none p-2 sm:p-3 flex flex-col gap-2 z-20">
+  <div class="flex flex-wrap items-start justify-between gap-2">
+    <!-- Left: Wizard Vitals, Gold, Gnome Army & Relics -->
+    <div class="retro-border p-2.5 sm:p-3 pointer-events-auto flex flex-col gap-1.5 min-w-[250px] sm:min-w-[300px]">
+      <div class="flex items-center justify-between gap-2">
+        <span class="pixel-font text-[10px] sm:text-xs text-amber-400" id="hudWorldLabel">WORLD 1-1</span>
+        <div class="flex items-center gap-2">
+          <span class="text-lg text-yellow-400 font-bold">🪙 <span id="coinCount">60</span></span>
+          <span class="text-base text-emerald-300 font-bold" title="Hired Gnome Squad">🧝 <span id="gnomeCountHud">0/3</span></span>
+          <span class="text-base text-amber-200 font-bold" title="Platform Blocks">🧱 <span id="blockCount">30</span></span>
+        </div>
+      </div>
+
+      <!-- Health Bar -->
+      <div class="w-full bg-slate-950 h-4 border-2 border-slate-600 relative overflow-hidden">
+        <div id="hpBar" class="h-full bg-gradient-to-r from-red-600 to-rose-500 transition-all duration-150" style="width: 100%;"></div>
+        <span id="hpText" class="absolute inset-0 flex items-center justify-center text-xs font-bold tracking-wider drop-shadow">120 / 120 HP</span>
+      </div>
+
+      <!-- Mana Bar -->
+      <div class="w-full bg-slate-950 h-3.5 border-2 border-slate-600 relative overflow-hidden">
+        <div id="manaBar" class="h-full bg-gradient-to-r from-blue-600 to-cyan-400 transition-all duration-100" style="width: 100%;"></div>
+        <span id="manaText" class="absolute inset-0 flex items-center justify-center text-[11px] font-bold tracking-wider drop-shadow">100 / 100 MP</span>
+      </div>
+
+      <!-- Relics & Talk to Gnome Button (Hidden when 0 Gnomes) -->
+      <div class="flex items-center justify-between gap-1 pt-0.5 border-t border-slate-700/80">
+        <div id="relicBar" onclick="openCodexModal()" class="flex items-center gap-1 flex-wrap cursor-pointer hover:opacity-90" title="Click to open Relic & Trophy Codex">
+          <span class="text-xs text-slate-400">Relics:</span>
+          <span class="text-xs text-slate-500 italic">None</span>
+        </div>
+        <button id="talkGnomeBtn" onclick="talkToNearestGnome()" class="hidden pointer-events-auto px-2 py-0.5 bg-emerald-900/90 hover:bg-emerald-800 border border-emerald-500 text-emerald-200 text-xs font-bold rounded">
+          💬 [T] Talk Gnome
+        </button>
+      </div>
+    </div>
+
+    <!-- Center: Biome Progress Minimap -->
+    <div class="retro-border p-2 sm:p-2.5 pointer-events-auto flex flex-col items-center gap-1 flex-1 max-w-md mx-auto">
+      <div class="w-full flex justify-between items-center text-xs sm:text-sm px-1">
+        <span id="minimapBiomeTitle" class="pixel-font text-[9px] sm:text-[10px] text-emerald-300">🌲 WORLD 1-1: THE ENCHANTED FOREST</span>
+        <span id="castleCounterText" class="pixel-font text-[9px] sm:text-[10px] text-amber-300">CASTLES: 0 / 0</span>
+      </div>
+      <div id="minimapContainer" class="w-full h-5 bg-slate-950 border-2 border-slate-700 relative overflow-hidden"></div>
+    </div>
+
+    <!-- Right: Control Mode Switcher, Save, Codex, Settings & Main Menu -->
+    <div class="flex items-center gap-1.5 pointer-events-auto flex-wrap justify-end">
+      <button id="controlModeBtn" onclick="toggleControlScheme()" class="pixel-btn bg-indigo-900 text-indigo-200 border-indigo-400" title="Switch between Mouse+Keyboard and Keyboard-Only Mode">
+        🖱️+⌨️ M&K MODE
+      </button>
+      <button onclick="openSaveCodeModal()" class="pixel-btn bg-emerald-800 text-emerald-200 border-emerald-400" title="Save your progress or copy a backup Save Code!">
+        💾 SAVE
+      </button>
+      <button onclick="openCodexModal()" class="pixel-btn bg-purple-900 text-amber-200 border-purple-400" title="View Relics & Trophies">
+        🏆 CODEX
+      </button>
+      <button id="muteBtn" class="pixel-btn bg-slate-800 text-slate-100">🔊 SFX</button>
+      <button onclick="openSettingsModal()" class="pixel-btn bg-slate-800 text-amber-300" title="Settings & Controls">⚙️</button>
+      <button id="menuBtn" class="pixel-btn bg-rose-950 text-rose-200 border-rose-400">🏠 MENU</button>
+    </div>
+  </div>
+
+  <!-- Dynamic Interaction Prompt Banner -->
+  <div id="interactPrompt" class="hidden self-center gold-border px-4 py-2 pointer-events-auto animate-bounce cursor-pointer">
+    <span id="interactPromptText" class="pixel-font text-[10px] sm:text-xs text-amber-300">PRESS [E] TO INTERACT</span>
+  </div>
+
+  <!-- Gnome Speech Bubble Banner -->
+  <div id="gnomeChatBanner" class="hidden self-center retro-border px-4 py-2 pointer-events-auto max-w-md border-emerald-500">
+    <div class="flex items-center gap-2">
+      <span class="text-xl">🧝</span>
+      <div>
+        <div id="gnomeSpeakerName" class="pixel-font text-[9px] text-emerald-400">GNOME COMPANION</div>
+        <div id="gnomeSpeechText" class="text-base text-slate-100 leading-tight">"Keep blasting those Trolls, boss!"</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- BOTTOM SPELL HOTBAR & MOBILE CONTROLS                             -->
+<!-- ================================================================= -->
+<div class="fixed bottom-0 left-0 right-0 pointer-events-none p-2 sm:p-3 flex flex-col items-center gap-2 z-20">
+  <!-- Mobile Touch Controls -->
+  <div id="mobileControls" class="flex sm:hidden w-full justify-between items-center px-2 pointer-events-auto">
+    <div class="flex gap-2">
+      <button id="touchLeft" class="pixel-btn bg-slate-800/90 text-white px-4 py-3">◀</button>
+      <button id="touchRight" class="pixel-btn bg-slate-800/90 text-white px-4 py-3">▶</button>
+    </div>
+    <div class="flex gap-2">
+      <button id="touchTalk" onclick="talkToNearestGnome()" class="hidden pixel-btn bg-emerald-800/90 text-white px-3 py-3">💬</button>
+      <button id="touchInteract" class="pixel-btn bg-amber-700/90 text-white px-3 py-3">USE [E]</button>
+      <button id="touchJump" class="pixel-btn bg-blue-700/90 text-white px-4 py-3">JUMP ▲</button>
+    </div>
+  </div>
+
+  <!-- Mage Arena Spell Hotbar -->
+  <div id="spellHotbar" class="retro-border p-1.5 flex items-center gap-1.5 pointer-events-auto overflow-x-auto max-w-full"></div>
+  <div id="bottomControlsHint" class="text-xs sm:text-sm text-slate-300 bg-slate-950/85 px-3 py-0.5 rounded border border-slate-800">
+    <span class="text-amber-300">[A/D]</span> Move &bull;
+    <span class="text-amber-300">[W/Space]</span> Jump &bull;
+    <span class="text-amber-300">[L-Click / J]</span> Cast / Mine &bull;
+    <span class="text-amber-300">[R-Click / K]</span> Platform &bull;
+    <span class="text-amber-300">[E]</span> Interact
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- MODAL 1: BETWEEN-CASTLE GOBLIN GAMBLE TAVERN                      -->
+<!-- ================================================================= -->
+<div id="gambleModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-40 p-4">
+  <div class="gold-border max-w-lg w-full p-5 text-slate-100 flex flex-col gap-4">
+    <div class="flex justify-between items-center border-b-2 border-amber-700 pb-2">
+      <h2 class="pixel-font text-xs sm:text-sm text-amber-400">🎲 GOBLIN GAMBLE TAVERN</h2>
+      <button onclick="closeModals()" class="pixel-btn bg-rose-800 text-white">LEAVE [ESC]</button>
+    </div>
+
+    <p class="text-lg text-amber-100 leading-snug">
+      "Step right up, Wizard! Multiply your gold before the next Village & Castle! Your <strong class="text-emerald-400">Clover Relics</strong> boost win odds!"
+    </p>
+
+    <div class="bg-slate-950/90 border-2 border-amber-600/60 p-3 flex flex-col gap-2">
+      <div class="flex justify-between items-center text-lg">
+        <span>Your Purse: <strong class="text-yellow-400">🪙 <span id="gambleCoinsText">0</span></strong></span>
+        <span>Luck Bonus: <strong class="text-emerald-400" id="gambleLuckText">+0%</strong></span>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="text-base text-slate-300">Wager:</span>
+        <button onclick="setWager(10)" class="pixel-btn bg-slate-800 text-amber-300">10 G</button>
+        <button onclick="setWager(25)" class="pixel-btn bg-slate-800 text-amber-300">25 G</button>
+        <button onclick="setWager('half')" class="pixel-btn bg-slate-800 text-amber-300">HALF</button>
+        <button onclick="setWager('max')" class="pixel-btn bg-amber-700 text-white">ALL GOLD</button>
+        <span class="ml-auto pixel-font text-xs text-yellow-300">BET: <span id="currentWagerDisplay">10</span> G</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+      <div class="retro-border p-3 flex flex-col justify-between items-center text-center gap-2">
+        <div class="text-3xl">💀🥤</div>
+        <div class="pixel-font text-[10px] text-amber-300">SKULL CUPS</div>
+        <div class="text-sm text-slate-300">55% Base Win<br><strong class="text-emerald-400">2x Payout</strong></div>
+        <button onclick="playGoblinGame('cups')" class="pixel-btn bg-emerald-700 text-white w-full">PLAY 2X</button>
+      </div>
+      <div class="retro-border p-3 flex flex-col justify-between items-center text-center gap-2">
+        <div class="text-3xl">🎲🔥</div>
+        <div class="pixel-font text-[10px] text-cyan-300">ARCANE DICE</div>
+        <div class="text-sm text-slate-300">36% Base Win<br><strong class="text-cyan-400">3x Payout</strong></div>
+        <button onclick="playGoblinGame('dice')" class="pixel-btn bg-cyan-700 text-white w-full">ROLL 3X</button>
+      </div>
+      <div class="retro-border p-3 flex flex-col justify-between items-center text-center gap-2">
+        <div class="text-3xl">🎡💎</div>
+        <div class="pixel-font text-[10px] text-rose-400">BLOOD WHEEL</div>
+        <div class="text-sm text-slate-300">22% Base Win<br><strong class="text-rose-400">5x Payout</strong></div>
+        <button onclick="playGoblinGame('wheel')" class="pixel-btn bg-rose-700 text-white w-full">SPIN 5X</button>
+      </div>
+    </div>
+
+    <div id="gambleResultArea" class="bg-black/70 border-2 border-slate-700 p-3 text-center min-h-[58px] flex flex-col items-center justify-center">
+      <span class="text-slate-400 text-base">Select a wager and test your fortune!</span>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- MODAL 2: VILLAGE SPELL SHOP & GNOME MERCENARY BARRACKS            -->
+<!-- ================================================================= -->
+<div id="shopModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-40 p-4">
+  <div class="retro-border max-w-3xl w-full p-5 text-slate-100 flex flex-col gap-4 max-h-[92vh] overflow-y-auto">
+    <div class="flex justify-between items-center border-b-2 border-slate-600 pb-2">
+      <div>
+        <h2 class="pixel-font text-xs sm:text-sm text-cyan-300">🏘️ VILLAGE ARCANE BAZAAR & GNOME BARRACKS</h2>
+        <p class="text-base text-slate-300">Spend your winnings on Mage Arena spells, Gnome allies, and relics!</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-lg text-emerald-300 font-bold">🧝 <span id="shopGnomeText">0/3</span></span>
+        <span class="text-xl text-yellow-400 font-bold">🪙 <span id="shopCoinsText">0</span></span>
+        <button onclick="closeModals()" class="pixel-btn bg-rose-800 text-white">EXIT</button>
+      </div>
+    </div>
+
+    <div>
+      <h3 class="pixel-font text-[10px] text-emerald-400 mb-2">HIRE GNOME COMPANIONS (FIGHT TROLLS WITH YOU!):</h3>
+      <div id="shopGnomesGrid" class="grid grid-cols-1 sm:grid-cols-4 gap-2"></div>
+    </div>
+
+    <div>
+      <h3 class="pixel-font text-[10px] text-amber-300 mb-2">MAGE ARENA GRIMOIRES:</h3>
+      <div id="shopSpellsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"></div>
+    </div>
+
+    <div>
+      <h3 class="pixel-font text-[10px] text-emerald-300 mb-2">WIZARD UPGRADES & RELICS:</h3>
+      <div id="shopUpgradesGrid" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- MODAL 3: QUEEN AURELIA & ROYAL CASINO (BLACKJACK, BACCARAT, POKER) -->
+<!-- ================================================================= -->
+<div id="queenModal" class="fixed inset-0 bg-black/90 hidden items-center justify-center z-50 p-3 sm:p-5">
+  <div class="royal-border max-w-4xl w-full p-4 sm:p-6 text-slate-100 flex flex-col gap-3.5 max-h-[95vh] overflow-y-auto">
+    <!-- Top Header -->
+    <div class="flex flex-wrap items-center justify-between gap-2 border-b-2 border-purple-500/40 pb-2">
+      <div class="flex items-center gap-2.5">
+        <span class="text-3xl">👸✨</span>
+        <div>
+          <h2 id="queenModalTitle" class="pixel-font text-xs sm:text-sm text-pink-300">QUEEN AURELIA RESCUED! ROYAL CASINO</h2>
+          <p class="text-base text-purple-200">"Thank you, brave Wizard! Advance to the next World safely—or play at my Royal Casino tables first!"</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="bg-slate-950/90 border border-amber-500/50 px-3 py-1 text-base">
+          Purse: <strong class="text-yellow-400">🪙 <span id="queenStakesGold">0</span></strong> &bull;
+          Luck: <strong class="text-emerald-400" id="queenStakesOdds">+0%</strong>
+        </div>
+        <button onclick="advanceToNextLevel()" class="pixel-btn bg-emerald-600 text-white py-2.5 px-3">
+          🏰 TAKE QUEEN & ADVANCE ▶
+        </button>
+      </div>
+    </div>
+
+    <!-- Casino Game Tabs -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <button onclick="switchCasinoTab('blackjack')" id="tabBtn_blackjack" class="pixel-btn bg-emerald-800 text-white ring-2 ring-amber-300">🃏 BLACKJACK (21)</button>
+      <button onclick="switchCasinoTab('baccarat')" id="tabBtn_baccarat" class="pixel-btn bg-cyan-900 text-white">👑 ROYAL BACCARAT</button>
+      <button onclick="switchCasinoTab('poker')" id="tabBtn_poker" class="pixel-btn bg-indigo-900 text-white">♠️ 5-CARD DRAW POKER</button>
+      <button onclick="switchCasinoTab('allin')" id="tabBtn_allin" class="pixel-btn bg-rose-900 text-amber-200 allin-glow">🔥 ALL-IN WHEEL</button>
+    </div>
+
+    <!-- Wager Bar for Card Games -->
+    <div id="casinoWagerBar" class="bg-slate-950/90 border border-slate-700 px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="pixel-font text-[9px] text-amber-300">TABLE CHIP BET:</span>
+        <button onclick="setCasinoWager(15)" class="pixel-btn bg-slate-800 text-amber-300">15 G</button>
+        <button onclick="setCasinoWager(40)" class="pixel-btn bg-slate-800 text-amber-300">40 G</button>
+        <button onclick="setCasinoWager(100)" class="pixel-btn bg-slate-800 text-amber-300">100 G</button>
+        <button onclick="setCasinoWager('half')" class="pixel-btn bg-slate-800 text-amber-300">HALF</button>
+        <button onclick="setCasinoWager('max')" class="pixel-btn bg-amber-700 text-white">MAX BET</button>
+      </div>
+      <div class="pixel-font text-xs text-yellow-300">CURRENT BET: <span id="casinoBetDisplay">25 G</span></div>
+    </div>
+
+    <!-- TAB 1: BLACKJACK (21) -->
+    <div id="casinoTab_blackjack" class="felt-table p-4 flex flex-col gap-3">
+      <div class="flex justify-between items-center">
+        <span class="pixel-font text-[10px] text-amber-300">🃏 ROYAL BLACKJACK (DEALER STANDS ON 17 &bull; BLACKJACK PAYS 2.5x)</span>
+        <span id="bjStatusBadge" class="text-base text-emerald-300 font-bold">Click DEAL HAND to start!</span>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 my-1">
+        <div class="bg-black/40 border border-emerald-700 p-3 flex flex-col items-center gap-2 min-h-[140px]">
+          <div class="text-sm text-slate-300">👸 QUEEN DEALER HAND (<span id="bjDealerScore">0</span>)</div>
+          <div id="bjDealerCards" class="flex gap-2 flex-wrap justify-center"></div>
+        </div>
+        <div class="bg-black/40 border border-amber-500/60 p-3 flex flex-col items-center gap-2 min-h-[140px]">
+          <div class="text-sm text-amber-300">🧙‍♂️ WIZARD HAND (<span id="bjPlayerScore">0</span>)</div>
+          <div id="bjPlayerCards" class="flex gap-2 flex-wrap justify-center"></div>
+        </div>
+      </div>
+      <div class="flex justify-center gap-3 flex-wrap">
+        <button id="bjDealBtn" onclick="startBlackjackHand()" class="pixel-btn bg-amber-600 text-white px-5">DEAL HAND</button>
+        <button id="bjHitBtn" onclick="blackjackHit()" disabled class="pixel-btn bg-emerald-700 text-white px-5">HIT</button>
+        <button id="bjStandBtn" onclick="blackjackStand()" disabled class="pixel-btn bg-sky-700 text-white px-5">STAND</button>
+        <button id="bjDoubleBtn" onclick="blackjackDouble()" disabled class="pixel-btn bg-purple-700 text-white px-5">DOUBLE DOWN</button>
+      </div>
+    </div>
+
+    <!-- TAB 2: ROYAL BACCARAT -->
+    <div id="casinoTab_baccarat" class="felt-table p-4 hidden flex-col gap-3">
+      <div class="flex justify-between items-center">
+        <span class="pixel-font text-[10px] text-amber-300">👑 ROYAL BACCARAT (CLOSEST TO 9 WINS! TIE PAYS 8x!)</span>
+        <span id="bacStatusBadge" class="text-base text-emerald-300 font-bold">Bet on PLAYER, BANKER, or TIE!</span>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 my-1">
+        <div class="bg-black/40 border border-cyan-500/60 p-3 flex flex-col items-center gap-2 min-h-[140px]">
+          <div class="text-sm text-cyan-300">🧙‍♂️ PLAYER HAND (VAL: <span id="bacPlayerVal">0</span>)</div>
+          <div id="bacPlayerCards" class="flex gap-2 justify-center"></div>
+        </div>
+        <div class="bg-black/40 border border-rose-500/60 p-3 flex flex-col items-center gap-2 min-h-[140px]">
+          <div class="text-sm text-rose-300">🏦 TROLL BANKER HAND (VAL: <span id="bacBankerVal">0</span>)</div>
+          <div id="bacBankerCards" class="flex gap-2 justify-center"></div>
+        </div>
+      </div>
+      <div class="flex justify-center gap-3 flex-wrap">
+        <button onclick="playBaccarat('player')" class="pixel-btn bg-cyan-700 text-white px-4">BET PLAYER (2x)</button>
+        <button onclick="playBaccarat('banker')" class="pixel-btn bg-rose-700 text-white px-4">BET BANKER (2x)</button>
+        <button onclick="playBaccarat('tie')" class="pixel-btn bg-amber-600 text-white px-4">BET TIE (8x)</button>
+      </div>
+    </div>
+
+    <!-- TAB 3: 5-CARD DRAW POKER -->
+    <div id="casinoTab_poker" class="felt-table p-4 hidden flex-col gap-3">
+      <div class="flex justify-between items-center flex-wrap gap-1">
+        <span class="pixel-font text-[10px] text-amber-300">♠️ 5-CARD DRAW POKER (CLICK CARDS TO HOLD, THEN DRAW!)</span>
+        <span id="pokerStatusBadge" class="text-base text-emerald-300 font-bold">Jacks/High Pair=2x &bull; Two Pair=3x &bull; 3-Kind=4x &bull; Straight=6x &bull; Flush=7x</span>
+      </div>
+      <div id="pokerCardsRow" class="flex justify-center gap-2.5 sm:gap-4 my-3 min-h-[105px] items-center flex-wrap"></div>
+      <div class="flex justify-center gap-3">
+        <button id="pokerDealBtn" onclick="startPokerHand()" class="pixel-btn bg-amber-600 text-white px-6">DEAL 5 CARDS</button>
+        <button id="pokerDrawBtn" onclick="drawPokerSwap()" disabled class="pixel-btn bg-emerald-600 text-white px-6">DRAW NEW CARDS</button>
+      </div>
+    </div>
+
+    <!-- TAB 4: THE ULTIMATE ALL-IN WHEEL (WAGERS SPELLS, RELICS, GOLD & QUEEN) -->
+    <div id="casinoTab_allin" class="bg-black/85 border-4 border-rose-500 p-4 hidden flex-col items-center gap-3 text-center">
+      <div class="pixel-font text-xs text-rose-400">🔥 THE ARCHMAGE ALL-IN GAMBLE OF FATE 🔥</div>
+      <p class="text-base text-slate-200 max-w-xl">
+        Wager <strong class="text-amber-300">ALL YOUR SPELLS, RELICS, GOLD & QUEEN AURELIA</strong> on one spin!
+        Win to unlock the <strong class="text-pink-400">🌈 OMEGA ARCHMAGE BEAM</strong> + 10x Gold!
+        Lose and you lose your spells, relics, gold, and the Troll King respawns while you fight with a <strong class="text-stone-400">🪵 Pathetic Bonk Twig</strong>!
+      </p>
+      <div class="flex items-center gap-4 text-base text-amber-200">
+        <span>Spells Staked: <strong id="queenStakesSpells">3</strong></span> &bull;
+        <span>Gnomes Cheering: <strong id="queenStakesGnomes">0</strong></span>
+      </div>
+      <div class="flex items-center gap-4 my-1">
+        <div id="reel1" class="w-16 h-16 bg-slate-900 border-2 border-amber-400 flex items-center justify-center text-3xl">👑</div>
+        <div id="reel2" class="w-16 h-16 bg-slate-900 border-2 border-amber-400 flex items-center justify-center text-3xl">🔮</div>
+        <div id="reel3" class="w-16 h-16 bg-slate-900 border-2 border-amber-400 flex items-center justify-center text-3xl">💎</div>
+      </div>
+      <div id="allInStatusText" class="text-sm text-amber-300">Win Odds: 48% Base + Clover Luck Bonus!</div>
+      <button id="allInSpinBtn" onclick="triggerUltimateAllIn()" class="pixel-btn bg-gradient-to-r from-rose-600 via-amber-500 to-purple-600 text-white text-xs py-3 px-6 allin-glow">
+        🎲 SPIN ALL-IN WHEEL OF FATE!
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- MODAL 4: VICTORY / GAME OVER SUMMARY                              -->
+<!-- ================================================================= -->
+<div id="summaryModal" class="fixed inset-0 bg-black/90 hidden items-center justify-center z-50 p-4">
+  <div class="gold-border max-w-lg w-full p-6 text-center flex flex-col items-center gap-4">
+    <div id="summaryIcon" class="text-6xl">🏆</div>
+    <h2 id="summaryTitle" class="pixel-font text-base sm:text-lg text-amber-400">VICTORY!</h2>
+    <p id="summarySubtitle" class="text-xl text-slate-200 leading-relaxed"></p>
+    <div id="summaryStats" class="w-full bg-slate-950 border-2 border-slate-700 p-3 text-left text-lg space-y-1 text-slate-300"></div>
+    <div class="flex flex-wrap gap-3 w-full justify-center">
+      <button id="summaryNextLevelBtn" onclick="advanceToNextLevel()" class="pixel-btn bg-emerald-600 text-white py-3 px-5">
+        ▶ NEXT WORLD
+      </button>
+      <button id="summaryResetBtn" onclick="resetCompletedGameAndRestart()" class="hidden pixel-btn bg-rose-700 text-white py-3 px-5 allin-glow">
+        🔄 RESET & PLAY AGAIN (WORLD 1-1)
+      </button>
+      <button onclick="retryCurrentWorld()" class="pixel-btn bg-amber-600 text-white py-3 px-5">
+        🔄 REPLAY WORLD
+      </button>
+      <button onclick="returnToMainMenu()" class="pixel-btn bg-slate-700 text-white py-3 px-5">
+        🏠 MAIN MENU
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- MODAL 5: SETTINGS & CONTROLS MENU (M&K AND KEYBOARD ONLY)         -->
+<!-- ================================================================= -->
+<div id="helpModal" class="fixed inset-0 bg-black/85 hidden items-center justify-center z-50 p-4">
+  <div class="retro-border max-w-2xl w-full p-5 text-slate-100 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+    <div class="flex justify-between items-center border-b-2 border-slate-700 pb-3">
+      <div>
+        <h2 class="pixel-font text-xs sm:text-sm text-amber-400">⚙️ SETTINGS & CONTROLS</h2>
+        <p class="text-base text-slate-300 mt-0.5">Configure your input style, audio, and visual preferences.</p>
+      </div>
+      <button onclick="closeModals()" class="pixel-btn bg-rose-900 text-white">X</button>
+    </div>
+
+    <!-- 1. Control Scheme Selector -->
+    <div class="bg-slate-900/90 border-2 border-slate-700 p-3.5 flex flex-col gap-2.5">
+      <div class="pixel-font text-[10px] text-cyan-300">1. SELECT PLAY & CONTROL MODE:</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <button id="setMode_mk" onclick="setControlScheme('mouse')" class="pixel-btn bg-indigo-900 text-white py-3">
+          🖱️+⌨️ MOUSE & KEYBOARD
+        </button>
+        <button id="setMode_kbOnly" onclick="setControlScheme('keyboard')" class="pixel-btn bg-slate-800 text-slate-200 py-3">
+          ⌨️ KEYBOARD ONLY (NO MOUSE)
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. Detailed Controls Reference Breakdown -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-base">
+      <div class="bg-slate-950 border border-indigo-500/60 p-3 flex flex-col gap-1">
+        <div class="pixel-font text-[9px] text-indigo-300 mb-1">🖱️+⌨️ MOUSE & KEYBOARD</div>
+        <div><strong class="text-amber-300">[A / D]</strong> Move Left / Right</div>
+        <div><strong class="text-amber-300">[W / Space]</strong> Jump / Glide</div>
+        <div><strong class="text-amber-300">[Mouse Cursor]</strong> Aim Spells & Excavator</div>
+        <div><strong class="text-amber-300">[Left-Click]</strong> Cast / Mine</div>
+        <div><strong class="text-amber-300">[Right-Click]</strong> Build Platform</div>
+        <div><strong class="text-amber-300">[1-9] / [E] / [T]</strong> Spells / Interact / Talk</div>
+      </div>
+
+      <div class="bg-slate-950 border border-amber-500/60 p-3 flex flex-col gap-1">
+        <div class="pixel-font text-[9px] text-amber-300 mb-1">⌨️ KEYBOARD ONLY (NO MOUSE)</div>
+        <div><strong class="text-amber-300">[A / D]</strong> Move Left / Right</div>
+        <div><strong class="text-amber-300">[W / Space]</strong> Jump / Glide</div>
+        <div><strong class="text-amber-300">[Arrow Keys]</strong> Aim Reticle (Up/Down/Left/Right)</div>
+        <div><strong class="text-amber-300">[J or F]</strong> Cast Spell / Mine Blocks</div>
+        <div><strong class="text-amber-300">[K or G]</strong> Build Platform at Reticle</div>
+        <div><strong class="text-amber-300">[1-9] / [E] / [T]</strong> Spells / Interact / Talk</div>
+      </div>
+    </div>
+
+    <!-- 3. Audio & Visual Settings -->
+    <div class="bg-slate-900/90 border-2 border-slate-700 p-3.5 flex flex-col gap-2.5">
+      <div class="pixel-font text-[10px] text-amber-300">2. AUDIO & VISUAL SETTINGS:</div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <button id="settingSoundBtn" onclick="toggleSoundSetting()" class="pixel-btn bg-emerald-800 text-white">
+          🔊 RETRO SFX: ON
+        </button>
+        <button id="settingDmgTextBtn" onclick="toggleDamageNumbersSetting()" class="pixel-btn bg-emerald-800 text-white">
+          💥 DAMAGE TEXT: ON
+        </button>
+        <button id="settingAimGuideBtn" onclick="toggleAimGuideSetting()" class="pixel-btn bg-emerald-800 text-white">
+          🎯 AIM RETICLE: ON
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   RETRO 8-BIT SYNTHESIZER AUDIO ENGINE (Web Audio API)
+   ============================================================================ */
+class SoundEngine {
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+  }
+  init() {
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) this.ctx = new AudioCtx();
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+  play(type) {
+    if (this.muted) return;
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+
+    const osc = (freq, endFreq, dur, wave = 'square', gainVal = 0.1, delay = 0) => {
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o.type = wave;
+      o.frequency.setValueAtTime(freq, now + delay);
+      if (endFreq) {
+        o.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), now + delay + dur);
+      }
+      g.gain.setValueAtTime(gainVal, now + delay);
+      g.gain.exponentialRampToValueAtTime(0.001, now + delay + dur);
+      o.connect(g);
+      g.connect(this.ctx.destination);
+      o.start(now + delay);
+      o.stop(now + delay + dur);
+    };
+
+    switch (type) {
+      case 'jump':
+        osc(180, 420, 0.13, 'square', 0.08);
+        break;
+      case 'fireball':
+        osc(260, 55, 0.22, 'sawtooth', 0.11);
+        break;
+      case 'bolt':
+        osc(560, 220, 0.11, 'triangle', 0.09);
+        break;
+      case 'gun':
+        osc(420, 90, 0.07, 'sawtooth', 0.13);
+        osc(180, 45, 0.09, 'square', 0.1, 0.01);
+        break;
+      case 'rpg':
+        osc(150, 32, 0.42, 'sawtooth', 0.16);
+        osc(95, 25, 0.38, 'square', 0.14, 0.04);
+        break;
+      case 'lightning':
+        osc(900, 180, 0.18, 'sawtooth', 0.11);
+        osc(640, 880, 0.12, 'square', 0.07, 0.05);
+        break;
+      case 'ice':
+        osc(700, 980, 0.14, 'sine', 0.1);
+        break;
+      case 'meteor':
+        osc(140, 35, 0.36, 'sawtooth', 0.14);
+        break;
+      case 'coin':
+        osc(987, 987, 0.06, 'square', 0.08);
+        osc(1318, 1318, 0.13, 'square', 0.08, 0.06);
+        break;
+      case 'hit':
+        osc(130, 45, 0.1, 'sawtooth', 0.1);
+        break;
+      case 'trollDie':
+        osc(160, 38, 0.26, 'sawtooth', 0.13);
+        break;
+      case 'gnome':
+        osc(520, 680, 0.08, 'triangle', 0.1, 0);
+        osc(720, 920, 0.12, 'triangle', 0.1, 0.08);
+        break;
+      case 'relic':
+        osc(440, 440, 0.08, 'triangle', 0.11, 0);
+        osc(554, 554, 0.08, 'triangle', 0.11, 0.08);
+        osc(659, 880, 0.22, 'triangle', 0.13, 0.16);
+        break;
+      case 'nes':
+        [330, 330, 330, 262, 330, 392, 196].forEach((f, i) => {
+          const delays = [0, 0.14, 0.28, 0.42, 0.54, 0.72, 1.0];
+          osc(f, f, 0.11, 'square', 0.1, delays[i]);
+        });
+        break;
+      case 'win':
+        [523, 659, 783, 1046].forEach((f, i) => osc(f, f, 0.14, 'square', 0.1, i * 0.09));
+        break;
+      case 'lose':
+        [300, 250, 200, 130].forEach((f, i) => osc(f, f * 0.9, 0.18, 'sawtooth', 0.1, i * 0.12));
+        break;
+      case 'dig':
+        osc(110, 60, 0.06, 'triangle', 0.08);
+        break;
+    }
+  }
+}
+const sfx = new SoundEngine();
+
+/* ============================================================================
+   DIFFICULTY TIERS, 5 WORLDS x 10 SUBLEVELS (50 STAGES) & CATALOGS
+   ============================================================================ */
+const DIFFICULTY_TIERS = {
+  easy: {
+    id: 'easy',
+    name: 'EASY',
+    gnomeCap: 2,
+    trollHpMult: 0.8,
+    trollDmgMult: 0.75,
+    trollCountBonus: 0,
+    desc: 'Relaxed story pace. 0.8x Troll HP & Damage. Base castle guards. Max Gnome Squad: 2 Gnomes.'
+  },
+  normal: {
+    id: 'normal',
+    name: 'NORMAL',
+    gnomeCap: 3,
+    trollHpMult: 1.0,
+    trollDmgMult: 1.0,
+    trollCountBonus: 2,
+    desc: 'Balanced adventure. 1.0x Troll HP & Damage. +2 Trolls per Castle. Max Gnome Squad: 3 Gnomes.'
+  },
+  hard: {
+    id: 'hard',
+    name: 'HARD',
+    gnomeCap: 4,
+    trollHpMult: 1.35,
+    trollDmgMult: 1.3,
+    trollCountBonus: 4,
+    desc: 'Fierce castle garrisons! 1.35x Troll HP & Damage. +4 Trolls per Castle. Max Gnome Squad: 4 Gnomes.'
+  },
+  insane: {
+    id: 'insane',
+    name: 'INSANE',
+    gnomeCap: 6,
+    trollHpMult: 1.85,
+    trollDmgMult: 1.75,
+    trollCountBonus: 7,
+    desc: 'Heavy siege warfare! 1.85x Troll HP & Damage. +7 Trolls per Castle. Max Gnome Squad: 6 Gnomes.'
+  },
+  nightmare: {
+    id: 'nightmare',
+    name: 'NIGHTMARE',
+    gnomeCap: 1,
+    trollHpMult: 4.2,
+    trollDmgMult: 3.8,
+    trollCountBonus: 24,
+    desc: 'NEAR-IMPOSSIBLE GAUNTLET! 4.2x Troll HP, 3.8x Damage, +24 Trolls per Castle! Max Gnome: 1 Legendary Champion Gnome!'
+  }
+};
+
+// 5 Main Worlds, each containing 10 Sublevels (50 total stages)
+const MAIN_WORLDS = [
+  {
+    worldNum: 1,
+    title: 'Realm of the Ancient Woods',
+    icon: '🌲',
+    desc: 'Mossy emerald forests, twilight groves, and subterranean crystal grottos.'
+  },
+  {
+    worldNum: 2,
+    title: 'Caverns of the Underdark',
+    icon: '💎',
+    desc: 'Bioluminescent mushroom bogs, quartz chasms, and deep underground fortresses.'
+  },
+  {
+    worldNum: 3,
+    title: 'Peaks of Fire & Frost',
+    icon: '❄️',
+    desc: 'Sunken desert mirages, howling glacial highlands, and volcanic magma cores.'
+  },
+  {
+    worldNum: 4,
+    title: 'The Clockwork & Astral Expanse',
+    icon: '⚙️',
+    desc: 'Mechanized brass citadels and floating starlight islands in the cosmic void.'
+  },
+  {
+    worldNum: 5,
+    title: "The Troll Emperor's Dominion",
+    icon: '👑',
+    desc: 'Bloodmoon necropolises and the Crimson Dread Keep of the Troll Emperor!'
+  }
+];
+
+const BIOME_PALETTES = [
+  {
+    name: 'The Enchanted Forest',
+    icon: '🌲',
+    skyTop: '#07111e',
+    skyBot: '#132a24',
+    grassColor: '#22c55e',
+    dirtColor: '#78350f',
+    stoneColor: '#475569',
+    brickColor: '#334155',
+    treeLeaves: '#15803d',
+    lore: 'Venture through mossy emerald oaks and storm the outer Troll Castles!'
+  },
+  {
+    name: 'The Whispering Dark Forest',
+    icon: '🌑',
+    skyTop: '#050510',
+    skyBot: '#1a102b',
+    grassColor: '#4c1d95',
+    dirtColor: '#2e1065',
+    stoneColor: '#312e81',
+    brickColor: '#1e1b4b',
+    treeLeaves: '#581c87',
+    lore: 'Moonlight barely pierces the twisted violet canopy where Shadow Trolls prowl.'
+  },
+  {
+    name: 'Subterranean Crystal Caverns',
+    icon: '💎',
+    skyTop: '#040d1a',
+    skyBot: '#082f49',
+    grassColor: '#06b6d4',
+    dirtColor: '#164e63',
+    stoneColor: '#0f172a',
+    brickColor: '#155e75',
+    treeLeaves: '#22d3ee',
+    lore: 'Deep beneath the forest lie glowing quartz grottos and subterranean strongholds.'
+  },
+  {
+    name: 'Bioluminescent Mushroom Bog',
+    icon: '🍄',
+    skyTop: '#041814',
+    skyBot: '#134e4a',
+    grassColor: '#14b8a6',
+    dirtColor: '#115e59',
+    stoneColor: '#334155',
+    brickColor: '#0f766e',
+    treeLeaves: '#f472b6',
+    lore: 'Giant neon fungi illuminate murky marshlands guarded by Swamp Trolls.'
+  },
+  {
+    name: 'Sunken Sandstorm Mirage',
+    icon: '🏜️',
+    skyTop: '#271204',
+    skyBot: '#7c2d12',
+    grassColor: '#f59e0b',
+    dirtColor: '#b45309',
+    stoneColor: '#78350f',
+    brickColor: '#92400e',
+    treeLeaves: '#84cc16',
+    lore: 'Ancient sandstone fortresses rise from golden dunes. Watch out for boulder barrages!'
+  },
+  {
+    name: 'Frostpeak Glacial Highlands',
+    icon: '❄️',
+    skyTop: '#081c38',
+    skyBot: '#1e3a8a',
+    grassColor: '#e0f2fe',
+    dirtColor: '#0284c7',
+    stoneColor: '#38bdf8',
+    brickColor: '#1d4ed8',
+    treeLeaves: '#bae6fd',
+    lore: 'Howling blizzards sweep icy battlements manned by Frost Trolls.'
+  },
+  {
+    name: 'Obsidian Magma Core',
+    icon: '🌋',
+    skyTop: '#1f0505',
+    skyBot: '#7f1d1d',
+    grassColor: '#ef4444',
+    dirtColor: '#450a0a',
+    stoneColor: '#1c1917',
+    brickColor: '#991b1b',
+    treeLeaves: '#f97316',
+    lore: 'Rivers of molten brimstone surround basalt citadels and Volcanic Troll Warlords.'
+  },
+  {
+    name: 'Clockwork Brass Metropolis',
+    icon: '⚙️',
+    skyTop: '#18130a',
+    skyBot: '#422006',
+    grassColor: '#eab308',
+    dirtColor: '#713f12',
+    stoneColor: '#52525b',
+    brickColor: '#a16207',
+    treeLeaves: '#facc15',
+    lore: 'Gears grind inside mechanized steam-castles where Armored Trolls patrol.'
+  },
+  {
+    name: 'Astral Aether Sky-Citadel',
+    icon: '🌌',
+    skyTop: '#090314',
+    skyBot: '#3b0764',
+    grassColor: '#c084fc',
+    dirtColor: '#4c1d95',
+    stoneColor: '#1e1b4b',
+    brickColor: '#6b21a8',
+    treeLeaves: '#e879f9',
+    lore: 'Floating starlight islands bridge the cosmic void near the throne world.'
+  },
+  {
+    name: "Troll Emperor's Dread Keep",
+    icon: '👑',
+    skyTop: '#110208',
+    skyBot: '#4c0519',
+    grassColor: '#f43f5e',
+    dirtColor: '#881337',
+    stoneColor: '#18181b',
+    brickColor: '#be123c',
+    treeLeaves: '#fb7185',
+    lore: 'Storm the Crimson Dread Keep, defeat the Troll Emperor, and rescue Queen Aurelia!'
+  }
+];
+
+const TOTAL_STAGES = 50; // 5 Worlds * 10 Sublevels
+
+function getStageBiomeInfo(stageIndex) {
+  const clamped = Math.max(1, Math.min(TOTAL_STAGES, stageIndex));
+  const worldNum = Math.floor((clamped - 1) / 10) + 1;
+  const subNum = ((clamped - 1) % 10) + 1;
+  const paletteIdx = Math.min(BIOME_PALETTES.length - 1, Math.floor((clamped - 1) / 5));
+  const base = BIOME_PALETTES[paletteIdx];
+  const worldMeta = MAIN_WORLDS[worldNum - 1];
+  return {
+    stageIndex: clamped,
+    worldNum,
+    subNum,
+    worldCode: `${worldNum}-${subNum}`,
+    name: `${base.name} (${worldMeta.title.split(' ')[0]} ${subNum})`,
+    shortName: base.name,
+    icon: base.icon,
+    skyTop: base.skyTop,
+    skyBot: base.skyBot,
+    grassColor: base.grassColor,
+    dirtColor: base.dirtColor,
+    stoneColor: base.stoneColor,
+    brickColor: base.brickColor,
+    treeLeaves: base.treeLeaves,
+    lore: base.lore
+  };
+}
+
+const TILE_SIZE = 24;
+const WORLD_HEIGHT = 48;
+const GROUND_Y = 33;
+
+const TILES = {
+  AIR: 0,
+  GRASS: 1,
+  DIRT: 2,
+  STONE: 3,
+  CASTLE_BRICK: 4,
+  CASTLE_BG: 5,
+  WOOD_PLATFORM: 6,
+  SPIKE: 7,
+  TORCH: 8,
+  BEDROCK: 9,
+  IRON_DOOR: 10
+};
+
+const SPELL_CATALOG = {
+  pickaxe: {
+    id: 'pickaxe',
+    name: 'Excavator Wand',
+    icon: '⛏️',
+    mana: 0,
+    cooldown: 16,
+    color: '#fbbf24',
+    desc: 'Breaks dirt, stone & castle doors. Harvests blocks for building.',
+    cost: 0,
+    unlocked: true
+  },
+  bolt: {
+    id: 'bolt',
+    name: 'Arcane Bolt',
+    icon: '✨',
+    mana: 6,
+    cooldown: 19,
+    dmg: 26,
+    color: '#38bdf8',
+    desc: 'Focused mana bolt with steady pace and reliable impact.',
+    cost: 0,
+    unlocked: true
+  },
+  fireball: {
+    id: 'fireball',
+    name: 'Ignis Fireball',
+    icon: '🔥',
+    mana: 14,
+    cooldown: 36,
+    dmg: 52,
+    color: '#f97316',
+    desc: 'Heavy explosive fireball that blasts Trolls and fragile dirt tiles.',
+    cost: 0,
+    unlocked: true
+  },
+  frost: {
+    id: 'frost',
+    name: 'Frost Ice Spear',
+    icon: '❄️',
+    mana: 13,
+    cooldown: 28,
+    dmg: 38,
+    color: '#67e8f9',
+    desc: 'Pierces targets and chills Trolls, slowing movement by 60%.',
+    cost: 280,
+    unlocked: false
+  },
+  lightning: {
+    id: 'lightning',
+    name: 'Chain Lightning',
+    icon: '⚡',
+    mana: 19,
+    cooldown: 38,
+    dmg: 48,
+    color: '#facc15',
+    desc: 'High-voltage bolt that arcs between up to 4 nearby Trolls!',
+    cost: 520,
+    unlocked: false
+  },
+  homing: {
+    id: 'homing',
+    name: 'Soul Seekers',
+    icon: '🔮',
+    mana: 18,
+    cooldown: 34,
+    dmg: 25,
+    color: '#c084fc',
+    desc: 'Fires 3 homing arcane orbs that methodically hunt down Trolls.',
+    cost: 820,
+    unlocked: false
+  },
+  tornado: {
+    id: 'tornado',
+    name: 'Gale Tornado',
+    icon: '🌪️',
+    mana: 22,
+    cooldown: 44,
+    dmg: 34,
+    color: '#a7f3d0',
+    desc: 'Sweeping whirlwind that lifts Trolls and pushes them back!',
+    cost: 1200,
+    unlocked: false
+  },
+  meteor: {
+    id: 'meteor',
+    name: 'Starfall Meteor',
+    icon: '☄️',
+    mana: 30,
+    cooldown: 52,
+    dmg: 88,
+    color: '#f43f5e',
+    desc: 'Summons 3 cataclysmic pixel meteors from the sky to cursor.',
+    cost: 1750,
+    unlocked: false
+  },
+  pistol: {
+    id: 'pistol',
+    name: '9mm Arcane Glock',
+    icon: '🔫',
+    mana: 2,
+    cooldown: 11,
+    dmg: 58,
+    color: '#fbbf24',
+    desc: 'SECRET FIREARM! High-velocity semi-auto sidearm with zero mana strain.',
+    cost: 9999,
+    secret: true,
+    unlocked: false
+  },
+  ar: {
+    id: 'ar',
+    name: 'M4A1 Mage-Bine',
+    icon: '🪖',
+    mana: 1,
+    cooldown: 5,
+    dmg: 36,
+    color: '#facc15',
+    desc: 'SECRET ASSAULT RIFLE! Full-auto rapid-fire lead storm!',
+    cost: 9999,
+    secret: true,
+    unlocked: false
+  },
+  rpg: {
+    id: 'rpg',
+    name: 'Goblin-Buster RPG',
+    icon: '🚀',
+    mana: 8,
+    cooldown: 40,
+    dmg: 210,
+    color: '#ef4444',
+    desc: 'SECRET ROCKET LAUNCHER! Detonates castles, doors, and Troll bosses on impact!',
+    cost: 9999,
+    secret: true,
+    unlocked: false
+  },
+  omega: {
+    id: 'omega',
+    name: 'OMEGA ARCHMAGE BEAM',
+    icon: '🌈',
+    mana: 2,
+    cooldown: 8,
+    dmg: 130,
+    color: '#f472b6',
+    desc: 'Legendary All-In Jackpot Spell! Vaporizes Trolls & Castles!',
+    cost: 9999,
+    secret: true,
+    unlocked: false
+  },
+  stick: {
+    id: 'stick',
+    name: 'Pathetic Bonk Twig',
+    icon: '🪵',
+    mana: 0,
+    cooldown: 24,
+    dmg: 10,
+    color: '#a8a29e',
+    desc: 'You lost everything in the All-In Gamble. Good luck bonking.',
+    cost: 0,
+    secret: true,
+    unlocked: false
+  }
+};
+
+const RELIC_POOL = [
+  { id: 'clover', name: 'Four-Leaf Clover', icon: '🍀', desc: '+12% Win Odds in all Taverns & Royal Casino games!' },
+  { id: 'chalice', name: 'Vampiric Chalice', icon: '🍷', desc: 'Spells leech 12% of damage dealt as Wizard HP.' },
+  { id: 'feather', name: 'Zephyr Feather', icon: '🪶', desc: '+1 Extra Mid-Air Jump and +18% Movement Speed.' },
+  { id: 'hourglass', name: 'Chrono Hourglass', icon: '⏳', desc: '+85% Mana Regeneration speed.' },
+  { id: 'crown', name: 'Greed Crown', icon: '👑', desc: 'Trolls drop +50% more Gold Coins.' },
+  { id: 'prism', name: 'Arcane Prism', icon: '💎', desc: '30% chance for Spells to deal 2x Critical Damage!' }
+];
+
+const TROPHY_CATALOG = [
+  { id: 'first_castle', name: 'Castle Crasher', icon: '🏰', desc: 'Clear your very first Troll Castle.' },
+  { id: 'queen_rescued', name: 'Knight of Queen Aurelia', icon: '👸', desc: 'Defeat a Troll King and rescue Queen Aurelia.' },
+  { id: 'high_roller', name: 'High Roller', icon: '🎰', desc: 'Amass 1,000+ Gold Coins in your pouch at once.' },
+  { id: 'gnome_commander', name: 'Gnome Commander', icon: '🧝', desc: 'Fill your entire Gnome Squad to maximum capacity.' },
+  { id: 'relic_hunter', name: 'Relic Archaeologist', icon: '🏺', desc: 'Hold at least 4 Ancient Relics at the same time.' },
+  { id: 'all_in_victor', name: 'Fate Defier', icon: '🌈', desc: 'Win the Ultimate All-In Wheel of Fate at the Royal Casino!' },
+  { id: 'tactical_wizard', name: 'Call of Wizardry', icon: '🚀', desc: 'Unlock the secret Pistol, Assault Rifle, and RPG arsenal!' },
+  { id: 'moon_gazer', name: 'Lunar Marksman', icon: '🌙', desc: 'Discover the celestial Moon Easter Egg in the night sky.' },
+  { id: 'disco_party', name: 'Disco Archmage', icon: '🕺', desc: 'Activate the secret Rainbow Disco Mode Easter Egg!' },
+  { id: 'nightmare_slayer', name: 'Nightmare Immortal', icon: '💀', desc: 'Clear any stage on brutal NIGHTMARE difficulty!' }
+];
+
+const GNOME_CLASSES = {
+  pikeman: {
+    type: 'pikeman',
+    name: 'Gnome Pikeman',
+    hatColor: '#ef4444',
+    tunicColor: '#1d4ed8',
+    cost: 120,
+    hp: 75,
+    dmg: 7,
+    desc: 'Loyal melee helper who pokes nearby Trolls with a spear.'
+  },
+  archer: {
+    type: 'archer',
+    name: 'Gnome Archer',
+    hatColor: '#22c55e',
+    tunicColor: '#78350f',
+    cost: 165,
+    hp: 65,
+    dmg: 8,
+    desc: 'Fires light supporting arrows at Trolls from behind you.'
+  },
+  pyro: {
+    type: 'pyro',
+    name: 'Gnome Pyromancer',
+    hatColor: '#f97316',
+    tunicColor: '#7c2d12',
+    cost: 220,
+    hp: 60,
+    dmg: 11,
+    desc: 'Lobs small ember sparks to assist your main spells.'
+  },
+  cleric: {
+    type: 'cleric',
+    name: 'Gnome Cleric',
+    hatColor: '#38bdf8',
+    tunicColor: '#f8fafc',
+    cost: 260,
+    hp: 70,
+    dmg: 6,
+    desc: 'Occasionally heals the Wizard (+4 HP) and zaps Trolls.'
+  }
+};
+
+const GNOME_NAMES = [
+  'Bramble', 'Fizzlewig', 'Gimlet', 'Pockets', 'Barnaby', 'Tinker', 'Nibs',
+  'Wobblehat', 'Cogsworth', 'Pippin', 'Snickerdoodle', 'Zook', 'Bixby', 'Acorn'
+];
+
+const GNOME_DIALOGUES = [
+  "Did you know Trolls flash orange right before they swing or throw? Dodge when you see ⚠️!",
+  "If we reach the Queen's Royal Casino, always stand on 17 in Blackjack, boss!",
+  "Psst... rumor says typing 'GUNS' in the Trophy Codex or clicking the Moon 7 times unlocks a Pistol, AR & RPG!",
+  "Try typing 'GNOMEKING' or 'DISCO' while walking for some wild wizard magic!",
+  "Press [Right-Click] or [K] to build wooden steps if a castle wall is blocking our squad!",
+  "I found a shiny pebble earlier! Wait, no, that was a Troll tooth.",
+  "Chain Lightning is amazing when Trolls bunch up inside castle throne rooms!",
+  "We Gnomes are here for backup—your Wizard spells do the heavy lifting!",
+  "Hey Wizard, if you do the All-In Gamble at the end, don't bet my hat!",
+  "Five-Card Draw tip: Hold onto high pairs (Jacks or better) for an instant 2x payout!"
+];
+
+/* ============================================================================
+   GLOBAL GAME STATE
+   ============================================================================ */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let worldWidth = 300;
+let tileMap = [];
+let castles = [];
+let interactables = [];
+let trolls = [];
+let gnomes = [];
+let projectiles = [];
+let particles = [];
+let coins = [];
+let floatingTexts = [];
+let backgroundTrees = [];
+
+let player = null;
+let keys = {};
+let mouse = { x: 0, y: 0, worldX: 0, worldY: 0, leftDown: false, rightDown: false };
+let camera = { x: 0, y: 0 };
+let activeModal = null;
+let currentWager = 20;
+let casinoWager = 25;
+let activeShrine = null;
+let frameCount = 0;
+
+// Campaign, World/Sublevel & Menu State (1 to 50)
+let selectedDifficultyId = 'normal';
+let selectedMenuWorldTab = 1;
+let currentLevelNum = 1; // 1..50
+let maxUnlockedLevel = 1; // Only stages <= maxUnlockedLevel can be selected!
+let gnomeSpeechTimeout = null;
+
+// Trophies, Save State & Easter Eggs
+let unlockedTrophies = [];
+let secretGunsUnlocked = false;
+let discoEasterEgg = false;
+let bigHeadEasterEgg = false;
+let moonClickCount = 0;
+let keyBuffer = '';
+let konamiIndex = 0;
+const KONAMI_SEQ = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
+
+// Dynamic Shop Upgrade Scaling
+let hpUpgradePurchases = 0;
+let manaUpgradePurchases = 0;
+let relicUpgradePurchases = 0;
+
+// Control Mode: 'mouse' (M&K) or 'keyboard' (Keyboard Only)
+let controlScheme = 'mouse';
+let kbAimAngle = 0;
+
+// Extra Settings
+let showDamageNumbers = true;
+let showAimReticle = true;
+
+// Locked-in Chill Play Speed (0.82x)
+const gameSpeed = 0.82;
+
+/* ============================================================================
+   COMMUNITY FEEDBACK WALL & CLOUD PERSISTENCE (FIRESTORE SYNC)
+   ============================================================================ */
+const DEFAULT_FEEDBACK_IDEAS = [
+  { id: 1, author: 'Leo', category: '✨ New Spell', text: 'Add a Necromancer spell that turns defeated Trolls into friendly skeleton knights!', votes: 14 },
+  { id: 2, author: 'Maya S.', category: '🎰 Casino Game', text: 'Could we get Texas Holdem or Roulette in the Queen Casino?', votes: 9 },
+  { id: 3, author: 'Sam & Toby', category: '🧝 Gnome Upgrade', text: 'Let us buy golden hats for our Gnomes so they survive Troll Kings on Insane mode!', votes: 19 },
+  { id: 4, author: 'pixel_wiz', category: '🏰 New Biome/Boss', text: 'A Cyber-Dungeon world with laser Trolls would be awesome.', votes: 7 }
+];
+
+let feedbackPosts = [];
+let db = null;
+let auth = null;
+let isCloudSyncActive = false;
+let cloudInitAttempted = false;
+
+/* ============================================================================
+   SETTINGS & CONTROL SCHEME TOGGLES
+   =========================================================================== */
+function setControlScheme(scheme) {
+  controlScheme = scheme;
+  try {
+    localStorage.setItem('spellsStakes_controlMode', scheme);
+  } catch (e) {}
+  updateControlSchemeUI();
+  sfx.play('bolt');
+}
+
+function toggleControlScheme() {
+  setControlScheme(controlScheme === 'mouse' ? 'keyboard' : 'mouse');
+}
+
+function updateControlSchemeUI() {
+  const isMouse = (controlScheme === 'mouse');
+  const btn1 = document.getElementById('controlModeBtn');
+  const btn2 = document.getElementById('menuControlModeBtn');
+  const setBtn1 = document.getElementById('setMode_mk');
+  const setBtn2 = document.getElementById('setMode_kbOnly');
+
+  const text = isMouse ? '🖱️+⌨️ M&K MODE' : '⌨️ KEYBOARD ONLY';
+  if (btn1) btn1.textContent = text;
+  if (btn2) btn2.textContent = `🎮 MODE: ${isMouse ? 'MOUSE + KEYBOARD' : 'KEYBOARD ONLY'}`;
+
+  if (setBtn1 && setBtn2) {
+    if (isMouse) {
+      setBtn1.className = 'pixel-btn bg-indigo-900 text-white py-3 ring-2 ring-amber-400';
+      setBtn2.className = 'pixel-btn bg-slate-800 text-slate-200 py-3';
+    } else {
+      setBtn1.className = 'pixel-btn bg-slate-800 text-slate-200 py-3';
+      setBtn2.className = 'pixel-btn bg-indigo-900 text-white py-3 ring-2 ring-amber-400';
+    }
+  }
+}
+
+function openSettingsModal() {
+  openModal('helpModal');
+  updateControlSchemeUI();
+}
+
+let soundSettingEnabled = true;
+function toggleSoundSetting() {
+  soundSettingEnabled = !soundSettingEnabled;
+  sfx.muted = !soundSettingEnabled;
+  const btn = document.getElementById('settingSoundBtn');
+  if (btn) {
+    btn.textContent = soundSettingEnabled ? '🔊 RETRO SFX: ON' : '🔇 RETRO SFX: OFF';
+    btn.className = `pixel-btn ${soundSettingEnabled ? 'bg-emerald-800' : 'bg-rose-900'} text-white`;
+  }
+}
+
+let damageNumbersEnabled = true;
+function toggleDamageNumbersSetting() {
+  showDamageNumbers = !showDamageNumbers;
+  const btn = document.getElementById('settingDmgTextBtn');
+  if (btn) {
+    btn.textContent = showDamageNumbers ? '💥 DAMAGE TEXT: ON' : '💥 DAMAGE TEXT: OFF';
+    btn.className = `pixel-btn ${showDamageNumbers ? 'bg-emerald-800' : 'bg-rose-900'} text-white`;
+  }
+}
+
+let aimGuideEnabled = true;
+function toggleAimGuideSetting() {
+  showAimReticle = !showAimReticle;
+  const btn = document.getElementById('settingAimGuideBtn');
+  if (btn) {
+    btn.textContent = showAimReticle ? '🎯 AIM RETICLE: ON' : '🎯 AIM RETICLE: OFF';
+    btn.className = `pixel-btn ${showAimReticle ? 'bg-emerald-800' : 'bg-rose-900'} text-white`;
+  }
+}
+
+function updateCloudBadgeUI(isOnline) {
+  const badge = document.getElementById('cloudSyncBadge');
+  if (!badge) return;
+  if (isOnline) {
+    badge.textContent = '🌐 LIVE SYNC';
+    badge.className = 'px-1.5 py-0.5 text-[9px] pixel-font bg-emerald-900/80 text-emerald-300 border border-emerald-500';
+  } else {
+    badge.textContent = '💾 SAVED';
+    badge.className = 'px-1.5 py-0.5 text-[9px] pixel-font bg-slate-800 text-slate-300 border border-slate-600';
+  }
+}
+
+window.tryConnectCloudFeedback = async function () {
+  if (cloudInitAttempted) return;
+  try {
+    if (typeof __firebase_config === 'undefined' || !__firebase_config || !window.FirebaseSDK) {
+      updateCloudBadgeUI(false);
+      return;
+    }
+    cloudInitAttempted = true;
+    const sdk = window.FirebaseSDK;
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'spells-stakes-odyssey';
+    const firebaseConfig = JSON.parse(__firebase_config);
+
+    const app = sdk.initializeApp(firebaseConfig);
+    db = sdk.getFirestore(app);
+    auth = sdk.getAuth(app);
+
+    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+      await sdk.signInWithCustomToken(auth, __initial_auth_token);
+    } else {
+      await sdk.signInAnonymously(auth);
+    }
+
+    if (!auth.currentUser) {
+      updateCloudBadgeUI(false);
+      return;
+    }
+
+    const feedbackCol = sdk.collection(db, 'artifacts', appId, 'public', 'data', 'community_feedback');
+    sdk.onSnapshot(
+      feedbackCol,
+      (snapshot) => {
+        const cloudPosts = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (data && data.text) {
+            cloudPosts.push({ id: docSnap.id, ...data });
+          }
+        });
+        isCloudSyncActive = true;
+        updateCloudBadgeUI(true);
+        if (cloudPosts.length > 0) {
+          // Merge default starter ideas with live player posts
+          const combined = [...cloudPosts];
+          DEFAULT_FEEDBACK_IDEAS.forEach((def) => {
+            if (!combined.some((p) => p.text === def.text)) {
+              combined.push(def);
+            }
+          });
+          feedbackPosts = combined;
+          renderFeedbackBoard();
+        }
+      },
+      (err) => {
+        isCloudSyncActive = false;
+        updateCloudBadgeUI(false);
+      }
+    );
+  } catch (e) {
+    isCloudSyncActive = false;
+    updateCloudBadgeUI(false);
+  }
+};
+
+function loadSavedData() {
+  try {
+    const savedLvl = localStorage.getItem('spellsStakes_maxLevel50');
+    if (savedLvl) maxUnlockedLevel = Math.min(TOTAL_STAGES, Math.max(1, parseInt(savedLvl, 10)));
+    const savedCtrl = localStorage.getItem('spellsStakes_controlMode');
+    if (savedCtrl === 'keyboard' || savedCtrl === 'mouse') {
+      controlScheme = savedCtrl;
+    } else {
+      controlScheme = 'mouse';
+    }
+    const savedTrophies = localStorage.getItem('spellsStakes_trophies');
+    if (savedTrophies) unlockedTrophies = JSON.parse(savedTrophies);
+    const savedFb = localStorage.getItem('spellsStakes_feedback');
+    if (savedFb) {
+      feedbackPosts = JSON.parse(savedFb);
+    } else {
+      feedbackPosts = [...DEFAULT_FEEDBACK_IDEAS];
+    }
+  } catch (e) {
+    feedbackPosts = [...DEFAULT_FEEDBACK_IDEAS];
+  }
+  updateControlSchemeUI();
+  checkSavedCampaignButton();
+  window.tryConnectCloudFeedback();
+}
+
+/* ============================================================================
+   SAVE & RESUME CAMPAIGN SYSTEM + TROPHY & CODEX ENGINE + EASTER EGGS
+   ============================================================================ */
+let inMemorySaveFallback = null;
+
+function writeSaveStorage(key, val) {
+  try {
+    localStorage.setItem(key, val);
+  } catch (e) {}
+  try {
+    // Fallback to window.name & document.cookie when Google Sites blocks third-party iframe localStorage!
+    if (key === 'spellsStakes_savedRun') {
+      inMemorySaveFallback = val;
+      const encoded = btoa(encodeURIComponent(val));
+      document.cookie = `spellsStakes_savedRun=${encoded}; max-age=31536000; path=/; SameSite=None; Secure`;
+      window.name = `SPELLS_SAVE:${encoded}`;
+    }
+  } catch (e) {}
+}
+
+function readSaveStorage(key) {
+  try {
+    const item = localStorage.getItem(key);
+    if (item) return item;
+  } catch (e) {}
+
+  if (key === 'spellsStakes_savedRun') {
+    if (inMemorySaveFallback) return inMemorySaveFallback;
+    try {
+      if (window.name && window.name.startsWith('SPELLS_SAVE:')) {
+        const encoded = window.name.replace('SPELLS_SAVE:', '');
+        return decodeURIComponent(atob(encoded));
+      }
+      const match = document.cookie.match(/(?:^|;\s*)spellsStakes_savedRun=([^;]*)/);
+      if (match && match[1]) {
+        return decodeURIComponent(atob(match[1]));
+      }
+    } catch (e) {}
+  }
+  return null;
+}
+
+function buildCurrentSaveObject() {
+  if (!player) return null;
+  return {
+    timestamp: Date.now(),
+    currentLevelNum,
+    maxUnlockedLevel,
+    selectedDifficultyId,
+    coins: player.coins,
+    hp: player.hp,
+    maxHp: player.maxHp,
+    mana: player.mana,
+    maxMana: player.maxMana,
+    blocks: player.blocks,
+    activeSpell: player.activeSpell,
+    archmageAscended: player.archmageAscended,
+    brokeStickMode: player.brokeStickMode,
+    secretGunsUnlocked,
+    hpUpgradePurchases,
+    manaUpgradePurchases,
+    relicUpgradePurchases,
+    unlockedSpellIds: Object.values(SPELL_CATALOG).filter(s => s.unlocked).map(s => s.id),
+    relicIds: player.relics.map(r => r.id),
+    gnomeRoles: gnomes.map(g => g.role),
+    trophies: unlockedTrophies
+  };
+}
+
+function saveFullGameState(showNotification = false) {
+  if (!player) return;
+  try {
+    const savePayload = buildCurrentSaveObject();
+    const jsonStr = JSON.stringify(savePayload);
+    writeSaveStorage('spellsStakes_savedRun', jsonStr);
+    writeSaveStorage('spellsStakes_maxLevel50', String(maxUnlockedLevel));
+    checkSavedCampaignButton();
+    updateSaveModalUI();
+    if (showNotification) {
+      sfx.play('relic');
+      addFloatingText(player.x, player.y - 22, '💾 GAME SAVED!', '#34d399');
+    }
+  } catch (e) {}
+}
+
+function checkSavedCampaignButton() {
+  const btn = document.getElementById('resumeSaveBtn');
+  if (!btn) return;
+  try {
+    const raw = readSaveStorage('spellsStakes_savedRun');
+    if (!raw) {
+      btn.classList.add('hidden');
+      return;
+    }
+    const data = JSON.parse(raw);
+    const b = getStageBiomeInfo(data.currentLevelNum || 1);
+    btn.textContent = `💾 CONTINUE SAVED RUN (WORLD ${b.worldCode} • ${data.coins || 0}G)`;
+    btn.classList.remove('hidden');
+  } catch (e) {
+    btn.classList.add('hidden');
+  }
+}
+
+function applySaveDataAndLaunch(data) {
+  selectedDifficultyId = data.selectedDifficultyId || 'normal';
+  selectDifficulty(selectedDifficultyId);
+  currentLevelNum = data.currentLevelNum || 1;
+  maxUnlockedLevel = Math.max(maxUnlockedLevel, data.maxUnlockedLevel || currentLevelNum);
+  secretGunsUnlocked = Boolean(data.secretGunsUnlocked);
+  hpUpgradePurchases = data.hpUpgradePurchases || 0;
+  manaUpgradePurchases = data.manaUpgradePurchases || 0;
+  relicUpgradePurchases = data.relicUpgradePurchases || 0;
+  if (Array.isArray(data.trophies)) {
+    unlockedTrophies = Array.from(new Set([...unlockedTrophies, ...data.trophies]));
+  }
+
+  closeModals();
+  document.getElementById('mainMenuOverlay').classList.add('hidden');
+
+  Object.values(SPELL_CATALOG).forEach(s => {
+    s.unlocked = (data.unlockedSpellIds || ['pickaxe', 'bolt', 'fireball']).includes(s.id);
+  });
+
+  player = new Wizard(6 * TILE_SIZE, (GROUND_Y - 3) * TILE_SIZE);
+  player.coins = data.coins ?? 45;
+  player.maxHp = data.maxHp || 120;
+  player.hp = Math.min(player.maxHp, Math.max(25, data.hp || player.maxHp));
+  player.maxMana = data.maxMana || 100;
+  player.mana = data.mana || player.maxMana;
+  player.blocks = data.blocks ?? 30;
+  player.activeSpell = data.activeSpell || 'fireball';
+  player.archmageAscended = Boolean(data.archmageAscended);
+  player.brokeStickMode = Boolean(data.brokeStickMode);
+
+  player.relics = (data.relicIds || [])
+    .map(id => RELIC_POOL.find(r => r.id === id))
+    .filter(Boolean);
+
+  gnomes = [];
+  (data.gnomeRoles || []).forEach(role => {
+    if (gnomes.length < getMaxGnomeCap()) {
+      gnomes.push(new GnomeCompanion(6 * TILE_SIZE, (GROUND_Y - 3) * TILE_SIZE, role));
+    }
+  });
+
+  launchLevelWithNESTransition(currentLevelNum);
+}
+
+function resumeSavedCampaign() {
+  try {
+    const raw = readSaveStorage('spellsStakes_savedRun');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    applySaveDataAndLaunch(data);
+  } catch (e) {
+    startCampaignFromMenu();
+  }
+}
+
+function openSaveCodeModal() {
+  saveFullGameState(false);
+  openModal('saveCodeModal');
+  updateSaveModalUI();
+}
+
+function updateSaveModalUI() {
+  const statusBadge = document.getElementById('browserSaveStatusBadge');
+  const exportInput = document.getElementById('exportSaveCodeInput');
+  const resumeBtn = document.getElementById('modalResumeBtn');
+  if (!statusBadge || !exportInput) return;
+
+  const raw = readSaveStorage('spellsStakes_savedRun');
+  if (raw) {
+    try {
+      const data = JSON.parse(raw);
+      const b = getStageBiomeInfo(data.currentLevelNum || 1);
+      statusBadge.textContent = `✓ Saved: World ${b.worldCode} (${data.coins || 0} Gold)`;
+      exportInput.value = btoa(encodeURIComponent(raw));
+      if (resumeBtn) resumeBtn.disabled = false;
+    } catch (e) {
+      statusBadge.textContent = 'No Active Save Found';
+    }
+  } else if (player) {
+    const payload = buildCurrentSaveObject();
+    const str = JSON.stringify(payload);
+    exportInput.value = btoa(encodeURIComponent(str));
+    statusBadge.textContent = 'Ready to Save';
+  }
+}
+
+function copyGeneratedSaveCode() {
+  saveFullGameState(false);
+  const exportInput = document.getElementById('exportSaveCodeInput');
+  const msgEl = document.getElementById('saveCodeStatusMsg');
+  if (!exportInput || !exportInput.value) return;
+
+  exportInput.select();
+  document.execCommand('copy');
+  sfx.play('coin');
+  if (msgEl) {
+    msgEl.textContent = '📋 Save Code copied! Save it in a Google Doc or Note to load anytime!';
+    msgEl.classList.remove('hidden');
+    setTimeout(() => msgEl.classList.add('hidden'), 4000);
+  }
+}
+
+function loadFromSaveCode() {
+  const importInput = document.getElementById('importSaveCodeInput');
+  const msgEl = document.getElementById('saveCodeStatusMsg');
+  if (!importInput) return;
+  const code = (importInput.value || '').trim();
+  if (!code) return;
+
+  try {
+    const jsonStr = decodeURIComponent(atob(code));
+    const data = JSON.parse(jsonStr);
+    if (!data || typeof data.currentLevelNum !== 'number') throw new Error('Invalid code');
+    writeSaveStorage('spellsStakes_savedRun', jsonStr);
+    sfx.play('win');
+    applySaveDataAndLaunch(data);
+  } catch (e) {
+    sfx.play('lose');
+    if (msgEl) {
+      msgEl.textContent = '❌ Invalid Save Code! Make sure you copied the whole code.';
+      msgEl.classList.remove('hidden');
+    }
+  }
+}
+
+let resetConfirmArmed = false;
+let resetConfirmTimer = null;
+
+function handleResetButtonClick() {
+  const btn = document.getElementById('resetProgressBtn');
+  const msgEl = document.getElementById('saveCodeStatusMsg');
+  if (!resetConfirmArmed) {
+    resetConfirmArmed = true;
+    if (btn) {
+      btn.textContent = '⚠️ CLICK AGAIN TO CONFIRM RESET';
+      btn.className = 'pixel-btn bg-rose-600 text-amber-200 ring-2 ring-amber-300 whitespace-nowrap';
+    }
+    if (resetConfirmTimer) clearTimeout(resetConfirmTimer);
+    resetConfirmTimer = setTimeout(() => {
+      resetConfirmArmed = false;
+      if (btn) {
+        btn.textContent = '🗑️ RESET PROGRESS';
+        btn.className = 'pixel-btn bg-rose-800 text-white whitespace-nowrap';
+      }
+    }, 4000);
+    return;
+  }
+
+  resetConfirmArmed = false;
+  if (btn) {
+    btn.textContent = '🗑️ RESET PROGRESS';
+    btn.className = 'pixel-btn bg-rose-800 text-white whitespace-nowrap';
+  }
+  performFullCampaignReset();
+  if (msgEl) {
+    msgEl.textContent = '🔄 Campaign reset to World 1-1! Ready for a brand new adventure!';
+    msgEl.classList.remove('hidden');
+    setTimeout(() => msgEl.classList.add('hidden'), 3500);
+  }
+}
+
+function performFullCampaignReset() {
+  inMemorySaveFallback = null;
+  try {
+    localStorage.removeItem('spellsStakes_savedRun');
+    localStorage.setItem('spellsStakes_maxLevel50', '1');
+  } catch (e) {}
+  try {
+    document.cookie = 'spellsStakes_savedRun=; max-age=0; path=/; SameSite=None; Secure';
+    window.name = '';
+  } catch (e) {}
+
+  currentLevelNum = 1;
+  maxUnlockedLevel = 1;
+  selectedMenuWorldTab = 1;
+  hpUpgradePurchases = 0;
+  manaUpgradePurchases = 0;
+  relicUpgradePurchases = 0;
+  resetSpellsForNewCampaign();
+  player = new Wizard(6 * TILE_SIZE, (GROUND_Y - 3) * TILE_SIZE);
+  gnomes = [];
+  sfx.play('win');
+  checkSavedCampaignButton();
+  updateSaveModalUI();
+  renderMainMenuUI();
+}
+
+function resetCompletedGameAndRestart() {
+  performFullCampaignReset();
+  closeModals();
+  document.getElementById('mainMenuOverlay').classList.add('hidden');
+  launchLevelWithNESTransition(1);
+}
+
+/* ============================================================================
+   MAIN MENU, LEVEL SELECTOR, FEEDBACK BOARD, CODEX & TROPHIES
+   ============================================================================ */
+function awardTrophy(trophyId) {
+  if (unlockedTrophies.includes(trophyId)) return;
+  const t = TROPHY_CATALOG.find(item => item.id === trophyId);
+  if (!t) return;
+  unlockedTrophies.push(trophyId);
+  writeSaveStorage('spellsStakes_trophies', JSON.stringify(unlockedTrophies));
+  sfx.play('win');
+  if (player) {
+    addFloatingText(player.x, player.y - 28, `🏆 TROPHY: ${t.name}!`, '#facc15');
+  }
+}
+
+function openCodexModal() {
+  openModal('codexModal');
+  renderCodexAndTrophies();
+}
+
+function renderCodexAndTrophies() {
+  const relicsGrid = document.getElementById('codexRelicsGrid');
+  if (relicsGrid) {
+    relicsGrid.innerHTML = '';
+    RELIC_POOL.forEach(r => {
+      const count = player ? player.hasRelic(r.id) : 0;
+      const card = document.createElement('div');
+      card.className = `p-2.5 border-2 flex items-start gap-2.5 ${
+        count > 0 ? 'bg-slate-900 border-amber-400' : 'bg-slate-950/90 border-slate-800 opacity-80'
+      }`;
+      card.innerHTML = `
+        <div class="text-2xl">${r.icon}</div>
+        <div class="flex-1">
+          <div class="flex justify-between items-center">
+            <span class="pixel-font text-[9px] text-amber-300">${r.name}</span>
+            <span class="text-xs font-bold ${count > 0 ? 'text-emerald-400' : 'text-slate-500'}">Held: ${count}x</span>
+          </div>
+          <p class="text-sm text-slate-300 leading-tight mt-1">${r.desc}</p>
+        </div>
+      `;
+      relicsGrid.appendChild(card);
+    });
+  }
+
+  const trophiesGrid = document.getElementById('codexTrophiesGrid');
+  const countEl = document.getElementById('trophyProgressCount');
+  if (countEl) {
+    countEl.textContent = `${unlockedTrophies.length} / ${TROPHY_CATALOG.length} Unlocked`;
+  }
+  if (trophiesGrid) {
+    trophiesGrid.innerHTML = '';
+    TROPHY_CATALOG.forEach(t => {
+      const unlocked = unlockedTrophies.includes(t.id);
+      const card = document.createElement('div');
+      card.className = `p-2.5 border-2 flex items-start gap-2.5 ${
+        unlocked ? 'bg-amber-950/40 border-amber-400' : 'bg-slate-950/80 border-slate-800 opacity-60'
+      }`;
+      card.innerHTML = `
+        <div class="text-2xl">${unlocked ? t.icon : '🔒'}</div>
+        <div class="flex-1">
+          <div class="flex justify-between items-center">
+            <span class="pixel-font text-[9px] ${unlocked ? 'text-amber-300' : 'text-slate-400'}">${t.name}</span>
+            <span class="text-xs font-bold ${unlocked ? 'text-emerald-400' : 'text-slate-500'}">${unlocked ? '✓ UNLOCKED' : 'LOCKED'}</span>
+          </div>
+          <p class="text-sm text-slate-300 leading-tight mt-1">${t.desc}</p>
+        </div>
+      `;
+      trophiesGrid.appendChild(card);
+    });
+  }
+}
+
+function unlockSecretFirearms() {
+  secretGunsUnlocked = true;
+  SPELL_CATALOG.pistol.unlocked = true;
+  SPELL_CATALOG.ar.unlocked = true;
+  SPELL_CATALOG.rpg.unlocked = true;
+  if (player) {
+    player.activeSpell = 'rpg';
+    addFloatingText(player.x, player.y - 32, '🔫 SECRET ARSENAL: GLOCK, AR & RPG UNLOCKED!', '#f43f5e');
+  }
+  awardTrophy('tactical_wizard');
+  sfx.play('win');
+  renderHotbar();
+  saveFullGameState(false);
+}
+
+function redeemSecretCode(rawOverride) {
+  const input = document.getElementById('secretCodeInput');
+  const code = (rawOverride || (input ? input.value : '')).trim().toUpperCase();
+  if (!code) return;
+  if (input) input.value = '';
+
+  if (code === 'GUNS' || code === 'RAMBO' || code === 'WARZONE' || code === 'KONAMI') {
+    unlockSecretFirearms();
+    renderCodexAndTrophies();
+  } else if (code === 'DISCO') {
+    discoEasterEgg = !discoEasterEgg;
+    awardTrophy('disco_party');
+    sfx.play('win');
+    if (player) addFloatingText(player.x, player.y - 24, '🕺 DISCO ARCHMAGE MODE!', '#e879f9');
+    renderCodexAndTrophies();
+  } else if (code === 'GNOMEKING') {
+    bigHeadEasterEgg = !bigHeadEasterEgg;
+    sfx.play('gnome');
+    if (player) addFloatingText(player.x, player.y - 24, '🧝 GIANT GNOME HATS!', '#4ade80');
+  } else if (code === 'TROLLTAX') {
+    if (player) {
+      player.coins += 250;
+      sfx.play('coin');
+      addFloatingText(player.x, player.y - 24, '+250 SECRET GOLD!', '#fbbf24');
+      updateHUD();
+      saveFullGameState(false);
+    }
+  } else {
+    sfx.play('lose');
+  }
+}
+
+function selectDifficulty(diffId) {
+  if (!DIFFICULTY_TIERS[diffId]) return;
+  selectedDifficultyId = diffId;
+  const tier = DIFFICULTY_TIERS[diffId];
+
+  document.querySelectorAll('.diff-btn').forEach(btn => {
+    if (btn.dataset.diff === diffId) {
+      btn.classList.add('ring-2', 'ring-amber-400');
+    } else {
+      btn.classList.remove('ring-2', 'ring-amber-400');
+    }
+  });
+
+  const capEl = document.getElementById('diffCapPreview');
+  if (capEl) {
+    capEl.textContent = diffId === 'nightmare'
+      ? 'Max Gnome Squad: 1 Legendary Champion Gnome!'
+      : `Max Gnome Squad: ${tier.gnomeCap} Gnomes`;
+  }
+  const descEl = document.getElementById('diffDescText');
+  if (descEl) descEl.textContent = tier.desc;
+}
+
+function renderMainMenuUI() {
+  const bMax = getStageBiomeInfo(maxUnlockedLevel);
+  const badgeEl = document.getElementById('savedProgressBadge');
+  if (badgeEl) badgeEl.textContent = `FURTHEST UNLOCKED: WORLD ${bMax.worldCode}`;
+
+  const curBiome = getStageBiomeInfo(currentLevelNum);
+  const lblEl = document.getElementById('selectedWorldLabel');
+  if (lblEl) lblEl.textContent = `World ${curBiome.worldCode}: ${curBiome.shortName}`;
+
+  const tabsContainer = document.getElementById('mainWorldTabs');
+  if (tabsContainer) {
+    tabsContainer.innerHTML = '';
+    MAIN_WORLDS.forEach(w => {
+      const firstStageOfWorld = (w.worldNum - 1) * 10 + 1;
+      const worldUnlocked = firstStageOfWorld <= maxUnlockedLevel;
+      const isActiveTab = selectedMenuWorldTab === w.worldNum;
+
+      const tabBtn = document.createElement('button');
+      tabBtn.className = `pixel-btn py-2 px-1 text-[9px] flex flex-col items-center gap-0.5 ${
+        isActiveTab
+          ? 'bg-amber-600 text-white ring-2 ring-amber-300'
+          : worldUnlocked
+          ? 'bg-slate-800 text-slate-200'
+          : 'bg-slate-950 text-slate-600'
+      }`;
+      tabBtn.disabled = !worldUnlocked;
+      tabBtn.innerHTML = `<span>${worldUnlocked ? w.icon : '🔒'} W${w.worldNum}</span>`;
+      tabBtn.onclick = () => {
+        if (!worldUnlocked) return;
+        selectedMenuWorldTab = w.worldNum;
+        if (Math.floor((currentLevelNum - 1) / 10) + 1 !== w.worldNum) {
+          currentLevelNum = firstStageOfWorld;
+        }
+        sfx.play('bolt');
+        renderMainMenuUI();
+      };
+      tabsContainer.appendChild(tabBtn);
+    });
+  }
+
+  const grid = document.getElementById('levelSelectGrid');
+  if (grid) {
+    grid.innerHTML = '';
+    for (let sub = 1; sub <= 10; sub++) {
+      const stageIdx = (selectedMenuWorldTab - 1) * 10 + sub;
+      const b = getStageBiomeInfo(stageIdx);
+      const isUnlocked = stageIdx <= maxUnlockedLevel;
+      const isSelected = stageIdx === currentLevelNum;
+
+      const btn = document.createElement('button');
+      btn.className = `pixel-btn py-2 px-1 flex flex-col items-center justify-center gap-0.5 ${
+        isSelected
+          ? 'bg-amber-600 text-white ring-2 ring-white'
+          : isUnlocked
+          ? 'bg-slate-800 text-slate-200 hover:bg-slate-700'
+          : 'bg-slate-950 text-slate-600'
+      }`;
+      btn.disabled = !isUnlocked;
+      btn.innerHTML = `
+        <span class="text-sm">${isUnlocked ? b.icon : '🔒'}</span>
+        <span class="text-[8px]">${selectedMenuWorldTab}-${sub}</span>
+      `;
+      btn.onclick = () => {
+        if (!isUnlocked) return;
+        currentLevelNum = stageIdx;
+        sfx.play('bolt');
+        renderMainMenuUI();
+      };
+      grid.appendChild(btn);
+    }
+  }
+
+  selectDifficulty(selectedDifficultyId);
+  checkSavedCampaignButton();
+}
+
+function renderFeedbackBoard() {
+  const container = document.getElementById('feedbackListContainer');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const sorted = [...feedbackPosts].sort((a, b) => (b.votes || 0) - (a.votes || 0));
+  sorted.forEach(post => {
+    const item = document.createElement('div');
+    item.className = 'bg-slate-900/90 border border-slate-700 p-2.5 flex justify-between items-start gap-2';
+    item.innerHTML = `
+      <div class="flex-1">
+        <div class="flex items-center gap-2 text-xs">
+          <span class="text-amber-300 font-bold">${post.author || 'Wizard'}</span>
+          <span class="px-1.5 py-0.5 bg-slate-800 text-cyan-300 text-[10px] rounded">${post.category || '💡 Idea'}</span>
+        </div>
+        <p class="text-base text-slate-200 leading-snug mt-1">${post.text}</p>
+      </div>
+      <button onclick="upvoteFeedbackPost('${post.id}')" class="pixel-btn bg-slate-800 text-amber-300 px-2 py-1 text-[9px]">
+        ▲ ${post.votes || 0}
+      </button>
+    `;
+    container.appendChild(item);
+  });
+}
+
+async function submitFeedbackPost() {
+  const nameEl = document.getElementById('fbNameInput');
+  const catEl = document.getElementById('fbCategoryInput');
+  const txtEl = document.getElementById('fbTextInput');
+  const msgEl = document.getElementById('fbStatusMsg');
+  if (!txtEl) return;
+
+  const text = txtEl.value.trim();
+  if (!text) return;
+  const author = (nameEl && nameEl.value.trim()) ? nameEl.value.trim() : 'Anon Wizard';
+  const category = catEl ? catEl.value : '💡 General Idea';
+
+  const newPost = {
+    id: Date.now(),
+    author,
+    category,
+    text,
+    votes: 1,
+    createdAt: Date.now()
+  };
+
+  feedbackPosts.unshift(newPost);
+  writeSaveStorage('spellsStakes_feedback', JSON.stringify(feedbackPosts));
+  txtEl.value = '';
+  sfx.play('coin');
+  renderFeedbackBoard();
+
+  if (isCloudSyncActive && db && window.FirebaseSDK) {
+    try {
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'spells-stakes-odyssey';
+      const colRef = window.FirebaseSDK.collection(db, 'artifacts', appId, 'public', 'data', 'community_feedback');
+      await window.FirebaseSDK.addDoc(colRef, { author, category, text, votes: 1, createdAt: Date.now() });
+    } catch (e) {}
+  }
+
+  if (msgEl) {
+    msgEl.textContent = '✨ Idea posted to the Feedback Wall!';
+    msgEl.classList.remove('hidden');
+    setTimeout(() => msgEl.classList.add('hidden'), 3000);
+  }
+}
+
+async function upvoteFeedbackPost(postId) {
+  const target = feedbackPosts.find(p => String(p.id) === String(postId));
+  if (!target) return;
+  target.votes = (target.votes || 0) + 1;
+  writeSaveStorage('spellsStakes_feedback', JSON.stringify(feedbackPosts));
+  sfx.play('coin');
+  renderFeedbackBoard();
+
+  if (isCloudSyncActive && db && window.FirebaseSDK && typeof postId === 'string') {
+    try {
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'spells-stakes-odyssey';
+      const docRef = window.FirebaseSDK.doc(db, 'artifacts', appId, 'public', 'data', 'community_feedback', postId);
+      await window.FirebaseSDK.updateDoc(docRef, { votes: target.votes });
+    } catch (e) {}
+  }
+}
+
+function exportFeedbackToClipboard() {
+  const lines = feedbackPosts.map(p => `[${p.category}] ${p.author} (+${p.votes}): ${p.text}`).join('\n');
+  const temp = document.createElement('textarea');
+  temp.value = lines;
+  document.body.appendChild(temp);
+  temp.select();
+  document.execCommand('copy');
+  document.body.removeChild(temp);
+  const msgEl = document.getElementById('fbStatusMsg');
+  if (msgEl) {
+    msgEl.textContent = '📋 All feedback ideas copied to clipboard!';
+    msgEl.classList.remove('hidden');
+    setTimeout(() => msgEl.classList.add('hidden'), 3000);
+  }
+}
+
+function startCampaignFromMenu() {
+  closeModals();
+  document.getElementById('mainMenuOverlay').classList.add('hidden');
+  hpUpgradePurchases = 0;
+  manaUpgradePurchases = 0;
+  relicUpgradePurchases = 0;
+  resetSpellsForNewCampaign();
+  player = new Wizard(6 * TILE_SIZE, (GROUND_Y - 3) * TILE_SIZE);
+  gnomes = [];
+  launchLevelWithNESTransition(currentLevelNum);
+}
+
+function returnToMainMenu() {
+  saveFullGameState(false);
+  closeModals();
+  selectedMenuWorldTab = Math.floor((currentLevelNum - 1) / 10) + 1;
+  renderMainMenuUI();
+  document.getElementById('mainMenuOverlay').classList.remove('hidden');
+}
+
+function launchLevelWithNESTransition(lvlNum) {
+  currentLevelNum = Math.max(1, Math.min(TOTAL_STAGES, lvlNum));
+  if (currentLevelNum > maxUnlockedLevel) {
+    maxUnlockedLevel = currentLevelNum;
+    writeSaveStorage('spellsStakes_maxLevel50', String(maxUnlockedLevel));
+  }
+
+  const biome = getStageBiomeInfo(currentLevelNum);
+  const overlay = document.getElementById('nesTransitionOverlay');
+  document.getElementById('nesDifficultyBanner').textContent = `${DIFFICULTY_TIERS[selectedDifficultyId].name} DIFFICULTY`;
+  document.getElementById('nesWorldTitle').textContent = `WORLD ${biome.worldCode}`;
+  document.getElementById('nesBiomeSubtitle').textContent = `${biome.icon} ${biome.shortName.toUpperCase()}`;
+  document.getElementById('nesLivesText').textContent = `${player ? player.maxHp : 120} HP`;
+  document.getElementById('nesGnomeCount').textContent = `${gnomes.length} / ${getMaxGnomeCap()}`;
+  document.getElementById('nesBiomeLore').textContent = biome.lore;
+
+  overlay.classList.remove('hidden');
+  overlay.classList.add('flex');
+  sfx.play('nes');
+
+  generateBiomeWorld(currentLevelNum);
+  saveFullGameState(false);
+
+  setTimeout(() => {
+    overlay.classList.add('hidden');
+    overlay.classList.remove('flex');
+  }, 2200);
+}
+
+/* ============================================================================
+   WIZARD PLAYER & GNOME COMPANION CLASSES
+   ============================================================================ */
+class Wizard {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.w = 20;
+    this.h = 30;
+    this.vx = 0;
+    this.vy = 0;
+    this.facing = 1;
+    this.onGround = false;
+    this.jumpsRemaining = 1;
+    this.maxHp = 120;
+    this.hp = 120;
+    this.maxMana = 100;
+    this.mana = 100;
+    this.coins = 50;
+    this.blocks = 30;
+    this.activeSpell = 'fireball';
+    this.castCooldown = 0;
+    this.invulnTimer = 0;
+    this.relics = [];
+    this.archmageAscended = false;
+    this.brokeStickMode = false;
+  }
+
+  hasRelic(id) {
+    return this.relics.filter(r => r.id === id).length;
+  }
+
+  getLuckBonus() {
+    return this.hasRelic('clover') * 12;
+  }
+
+  update() {
+    const featherCount = this.hasRelic('feather');
+    const moveSpd = (2.65 + featherCount * 0.42) * gameSpeed;
+
+    if (keys['KeyA'] || keys['TouchLeft']) {
+      this.vx = -moveSpd;
+      this.facing = -1;
+    } else if (keys['KeyD'] || keys['TouchRight']) {
+      this.vx = moveSpd;
+      this.facing = 1;
+    } else {
+      this.vx *= 0.76;
+    }
+
+    // Keyboard-Only Aiming with Arrow Keys (or Smart Auto-Aim at nearby Trolls)
+    if (controlScheme === 'keyboard') {
+      let ax = 0;
+      let ay = 0;
+      if (keys['ArrowLeft']) ax -= 1;
+      if (keys['ArrowRight']) ax += 1;
+      if (keys['ArrowUp']) ay -= 1;
+      if (keys['ArrowDown']) ay += 1;
+
+      if (ax !== 0 || ay !== 0) {
+        kbAimAngle = Math.atan2(ay, ax);
+        mouse.worldX = this.x + this.w / 2 + Math.cos(kbAimAngle) * 70;
+        mouse.worldY = this.y + 12 + Math.sin(kbAimAngle) * 70;
+      } else {
+        // Smart auto-aim at nearest Troll if not holding Arrow Keys and not holding Pickaxe
+        let targetTroll = null;
+        let minDist = 280;
+        if (this.activeSpell !== 'pickaxe') {
+          for (const tr of trolls) {
+            const d = Math.hypot((tr.x + tr.w / 2) - this.x, (tr.y + tr.h / 2) - this.y);
+            if (d < minDist) {
+              minDist = d;
+              targetTroll = tr;
+            }
+          }
+        }
+        if (targetTroll) {
+          mouse.worldX = targetTroll.x + targetTroll.w / 2;
+          mouse.worldY = targetTroll.y + targetTroll.h / 2;
+        } else {
+          mouse.worldX = this.x + this.w / 2 + this.facing * 56;
+          mouse.worldY = this.y + 12;
+        }
+      }
+    }
+
+    const gravity = (keys['KeyW'] || keys['Space'] || keys['TouchJump']) && this.vy > 0 ? 0.14 : 0.28;
+    this.vy = Math.min(this.vy + gravity * gameSpeed, 7.5 * gameSpeed);
+
+    this.x += this.vx;
+    this.resolveCollisions(true);
+    this.y += this.vy;
+    this.onGround = false;
+    this.resolveCollisions(false);
+
+    if (this.onGround) {
+      this.jumpsRemaining = 1 + featherCount;
+    }
+
+    if (this.castCooldown > 0) this.castCooldown -= gameSpeed;
+    if (this.invulnTimer > 0) this.invulnTimer -= gameSpeed;
+
+    const manaRegen = (0.14 + this.hasRelic('hourglass') * 0.12) * gameSpeed;
+    this.mana = Math.min(this.maxMana, this.mana + manaRegen);
+
+    if (mouse.leftDown || keys['KeyJ'] || keys['KeyF']) {
+      this.castActiveSpell();
+    }
+  }
+
+  jump() {
+    if (this.jumpsRemaining > 0) {
+      this.vy = -6.3;
+      this.jumpsRemaining--;
+      this.onGround = false;
+      sfx.play('jump');
+      spawnParticles(this.x + this.w / 2, this.y + this.h, '#e2e8f0', 4);
+    }
+  }
+
+  castActiveSpell() {
+    if (this.castCooldown > 0) return;
+    const sp = SPELL_CATALOG[this.activeSpell] || SPELL_CATALOG.bolt;
+
+    if (sp.id === 'pickaxe') {
+      this.castCooldown = sp.cooldown;
+      mineTileAtCursor();
+      return;
+    }
+
+    if (this.mana < sp.mana) {
+      this.castCooldown = 14;
+      addFloatingText(this.x, this.y - 12, 'LOW MANA!', '#38bdf8');
+      return;
+    }
+
+    this.mana -= sp.mana;
+    this.castCooldown = sp.cooldown;
+
+    const cx = this.x + this.w / 2;
+    const cy = this.y + 12;
+    const angle = Math.atan2(mouse.worldY - cy, mouse.worldX - cx);
+    this.facing = Math.cos(angle) >= 0 ? 1 : -1;
+
+    if (sp.id === 'meteor') {
+      sfx.play('meteor');
+      for (let m = -1; m <= 1; m++) {
+        projectiles.push({
+          x: mouse.worldX + m * 30,
+          y: camera.y - 20 - Math.abs(m) * 25,
+          vx: (Math.random() - 0.5) * 0.8,
+          vy: 5.4,
+          spellId: 'meteor',
+          dmg: sp.dmg,
+          color: sp.color,
+          life: 140
+        });
+      }
+    } else if (sp.id === 'homing') {
+      sfx.play('bolt');
+      for (let h = -1; h <= 1; h++) {
+        const a = angle + h * 0.25;
+        projectiles.push({
+          x: cx,
+          y: cy,
+          vx: Math.cos(a) * 3.6,
+          vy: Math.sin(a) * 3.6,
+          spellId: 'homing',
+          dmg: sp.dmg,
+          color: sp.color,
+          homing: true,
+          life: 150
+        });
+      }
+    } else if (sp.id === 'pistol' || sp.id === 'ar') {
+      sfx.play('gun');
+      const spread = sp.id === 'ar' ? (Math.random() - 0.5) * 0.12 : 0.02;
+      projectiles.push({
+        x: cx,
+        y: cy,
+        vx: Math.cos(angle + spread) * 9.2,
+        vy: Math.sin(angle + spread) * 9.2,
+        spellId: sp.id,
+        dmg: sp.dmg,
+        color: sp.color,
+        life: 95
+      });
+    } else if (sp.id === 'rpg') {
+      sfx.play('rpg');
+      projectiles.push({
+        x: cx,
+        y: cy,
+        vx: Math.cos(angle) * 6.5,
+        vy: Math.sin(angle) * 6.5,
+        spellId: 'rpg',
+        dmg: sp.dmg,
+        color: sp.color,
+        life: 120
+      });
+    } else {
+      sfx.play(sp.id === 'fireball' ? 'fireball' : sp.id === 'lightning' ? 'lightning' : sp.id === 'frost' ? 'ice' : 'bolt');
+      const spd = sp.id === 'omega' ? 7.2 : sp.id === 'tornado' ? 3.2 : 4.8;
+      projectiles.push({
+        x: cx,
+        y: cy,
+        vx: Math.cos(angle) * spd,
+        vy: Math.sin(angle) * spd,
+        spellId: sp.id,
+        dmg: sp.dmg,
+        color: sp.color,
+        pierce: sp.id === 'frost' || sp.id === 'tornado' || sp.id === 'omega' ? 3 : 1,
+        life: sp.id === 'stick' ? 16 : 115
+      });
+    }
+  }
+
+  resolveCollisions(horizontal) {
+    const startX = Math.floor(this.x / TILE_SIZE);
+    const endX = Math.floor((this.x + this.w - 0.01) / TILE_SIZE);
+    const startY = Math.floor(this.y / TILE_SIZE);
+    const endY = Math.floor((this.y + this.h - 0.01) / TILE_SIZE);
+
+    for (let ty = startY; ty <= endY; ty++) {
+      for (let tx = startX; tx <= endX; tx++) {
+        const t = getTile(tx, ty);
+        if (isSolidTile(t)) {
+          if (horizontal) {
+            if (this.vx > 0) this.x = tx * TILE_SIZE - this.w;
+            else if (this.vx < 0) this.x = (tx + 1) * TILE_SIZE;
+            this.vx = 0;
+          } else {
+            if (this.vy > 0) {
+              this.y = ty * TILE_SIZE - this.h;
+              this.vy = 0;
+              this.onGround = true;
+            } else if (this.vy < 0) {
+              this.y = (ty + 1) * TILE_SIZE;
+              this.vy = 0;
+            }
+          }
+        } else if (!horizontal && t === TILES.WOOD_PLATFORM && this.vy > 0 && !keys['KeyS']) {
+          const prevBottom = (this.y - this.vy) + this.h;
+          if (prevBottom <= ty * TILE_SIZE + 7) {
+            this.y = ty * TILE_SIZE - this.h;
+            this.vy = 0;
+            this.onGround = true;
+          }
+        }
+      }
+    }
+  }
+
+  takeDamage(dmg) {
+    if (this.invulnTimer > 0) return;
+    this.hp -= dmg;
+    this.invulnTimer = 42;
+    this.vy = -3.8;
+    sfx.play('hit');
+    addFloatingText(this.x + 8, this.y - 10, `-${dmg} HP`, '#f43f5e');
+    spawnParticles(this.x + 10, this.y + 15, '#ef4444', 6);
+    updateHUD();
+
+    if (this.hp <= 0) {
+      this.hp = 0;
+      sfx.play('lose');
+      showSummaryModal(
+        '💀',
+        'DEFEATED IN BATTLE!',
+        'The Castle Trolls overwhelmed you! Retry this stage with all your unlocked spells & gold intact!',
+        false
+      );
+    }
+  }
+
+  draw(ctx) {
+    if (this.invulnTimer > 0 && Math.floor(this.invulnTimer / 3) % 2 === 0) return;
+    const px = Math.floor(this.x);
+    const py = Math.floor(this.y);
+
+    ctx.save();
+    ctx.translate(px + this.w / 2, py + this.h / 2);
+    ctx.scale(this.facing, 1);
+
+    // Robe
+    const discoColors = ['#f43f5e', '#facc15', '#4ade80', '#38bdf8', '#c084fc'];
+    ctx.fillStyle = discoEasterEgg
+      ? discoColors[Math.floor(frameCount / 6) % discoColors.length]
+      : this.archmageAscended
+      ? '#ec4899'
+      : '#3b82f6';
+    ctx.fillRect(-8, -4, 16, 19);
+
+    // Face & Beard
+    ctx.fillStyle = '#fde68a';
+    ctx.fillRect(-6, -12, 12, 8);
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(-4, -5, 10, 6);
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(2, -10, 2, 2);
+
+    // Wizard Hat
+    ctx.fillStyle = this.archmageAscended ? '#f59e0b' : '#1d4ed8';
+    ctx.fillRect(-11, -14, 22, 3);
+    ctx.fillRect(-7, -21, 14, 7);
+    ctx.fillRect(-4, -26, 8, 5);
+
+    // Staff or Firearm
+    if (this.activeSpell === 'pistol' || this.activeSpell === 'ar' || this.activeSpell === 'rpg') {
+      ctx.fillStyle = this.activeSpell === 'rpg' ? '#15803d' : '#334155';
+      ctx.fillRect(4, -4, 14, 5);
+    } else {
+      ctx.fillStyle = '#92400e';
+      ctx.fillRect(7, -10, 3, 22);
+      ctx.fillStyle = (SPELL_CATALOG[this.activeSpell] || SPELL_CATALOG.bolt).color;
+      ctx.fillRect(6, -14, 5, 5);
+    }
+
+    ctx.restore();
+  }
+}
+
+class GnomeCompanion {
+  constructor(x, y, role = 'pikeman') {
+    this.x = x;
+    this.y = y;
+    this.w = 16;
+    this.h = 22;
+    this.vx = 0;
+    this.vy = 0;
+    this.facing = 1;
+    this.onGround = false;
+    this.role = role;
+    const spec = GNOME_CLASSES[role] || GNOME_CLASSES.pikeman;
+    this.roleName = spec.name;
+    this.hatColor = spec.hatColor;
+    this.tunicColor = spec.tunicColor;
+    this.name = GNOME_NAMES[Math.floor(Math.random() * GNOME_NAMES.length)];
+
+    this.isChampion = (selectedDifficultyId === 'nightmare');
+    this.dmg = this.isChampion ? Math.floor(spec.dmg * 7.5) : spec.dmg;
+    this.attackCooldown = 40;
+    this.speechText = '';
+    this.speechTimer = 0;
+  }
+
+  hasRelic(id) {
+    return player ? player.hasRelic(id) : 0;
+  }
+
+  say(msg, dur = 110) {
+    this.speechText = msg;
+    this.speechTimer = dur;
+  }
+
+  update() {
+    if (!player) return;
+    if (this.speechTimer > 0) this.speechTimer -= gameSpeed;
+    if (this.attackCooldown > 0) this.attackCooldown -= gameSpeed;
+
+    const distToWizard = player.x - this.x;
+    if (Math.abs(distToWizard) > 360) {
+      this.x = player.x - player.facing * 24;
+      this.y = player.y;
+    } else if (Math.abs(distToWizard) > 48) {
+      this.facing = distToWizard > 0 ? 1 : -1;
+      this.vx = this.facing * (this.isChampion ? 2.5 : 2.1) * gameSpeed;
+    } else {
+      this.vx *= 0.75;
+    }
+
+    this.vy = Math.min(this.vy + 0.28 * gameSpeed, 7.0 * gameSpeed);
+    this.x += this.vx;
+    if (this.resolveCollisions(true) && this.onGround) {
+      this.vy = -5.6;
+      this.onGround = false;
+    }
+    this.y += this.vy;
+    this.onGround = false;
+    this.resolveCollisions(false);
+
+    // Attack nearby Trolls
+    if (this.attackCooldown <= 0 && trolls.length > 0) {
+      let nearest = null;
+      let bestDist = 240;
+      for (const tr of trolls) {
+        const d = Math.hypot((tr.x + tr.w / 2) - this.x, (tr.y + tr.h / 2) - this.y);
+        if (d < bestDist) {
+          bestDist = d;
+          nearest = tr;
+        }
+      }
+      if (nearest) {
+        this.facing = nearest.x > this.x ? 1 : -1;
+        this.attackCooldown = this.isChampion ? 36 : 82;
+        const angle = Math.atan2((nearest.y + nearest.h / 2) - (this.y + 10), (nearest.x + nearest.w / 2) - (this.x + 8));
+        projectiles.push({
+          x: this.x + 8,
+          y: this.y + 10,
+          vx: Math.cos(angle) * 4.6,
+          vy: Math.sin(angle) * 4.6,
+          spellId: 'gnomeShot',
+          dmg: this.dmg,
+          color: this.isChampion ? '#facc15' : this.hatColor,
+          pierce: this.isChampion ? 2 : 1,
+          life: 85
+        });
+
+        if (this.role === 'cleric' && player.hp < player.maxHp) {
+          player.hp = Math.min(player.maxHp, player.hp + (this.isChampion ? 10 : 4));
+          addFloatingText(player.x, player.y - 10, `+${this.isChampion ? 10 : 4} HP`, '#38bdf8');
+        }
+      }
+    }
+  }
+
+  resolveCollisions(horizontal) {
+    let hitWall = false;
+    const startX = Math.floor(this.x / TILE_SIZE);
+    const endX = Math.floor((this.x + this.w - 0.01) / TILE_SIZE);
+    const startY = Math.floor(this.y / TILE_SIZE);
+    const endY = Math.floor((this.y + this.h - 0.01) / TILE_SIZE);
+
+    for (let ty = startY; ty <= endY; ty++) {
+      for (let tx = startX; tx <= endX; tx++) {
+        const t = getTile(tx, ty);
+        if (isSolidTile(t)) {
+          if (horizontal) {
+            if (this.vx > 0) this.x = tx * TILE_SIZE - this.w;
+            else if (this.vx < 0) this.x = (tx + 1) * TILE_SIZE;
+            this.vx = 0;
+            hitWall = true;
+          } else {
+            if (this.vy > 0) {
+              this.y = ty * TILE_SIZE - this.h;
+              this.vy = 0;
+              this.onGround = true;
+            } else if (this.vy < 0) {
+              this.y = (ty + 1) * TILE_SIZE;
+              this.vy = 0;
+            }
+          }
+        }
+      }
+    }
+    return hitWall;
+  }
+
+  draw(ctx) {
+    const px = Math.floor(this.x);
+    const py = Math.floor(this.y);
+    ctx.save();
+    ctx.translate(px + this.w / 2, py + this.h / 2);
+    ctx.scale(this.facing, 1);
+
+    ctx.fillStyle = this.tunicColor;
+    ctx.fillRect(-6, -2, 12, 13);
+    ctx.fillStyle = '#fde68a';
+    ctx.fillRect(-5, -9, 10, 7);
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(-4, -4, 9, 5);
+
+    const hatScale = bigHeadEasterEgg ? 2.1 : 1.0;
+    ctx.fillStyle = this.hatColor;
+    ctx.fillRect(-7 * hatScale, -16 * hatScale, 14 * hatScale, 7 * hatScale);
+    ctx.fillRect(-4 * hatScale, -22 * hatScale, 8 * hatScale, 6 * hatScale);
+
+    if (this.isChampion) {
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(-6, -25, 12, 4);
+    }
+    ctx.restore();
+
+    if (this.speechTimer > 0 && this.speechText) {
+      ctx.font = 'bold 11px monospace';
+      ctx.fillStyle = '#a7f3d0';
+      ctx.fillText(this.speechText, px - 14, py - 14);
+    }
+  }
+}
+
+/* ============================================================================
+   WINDOW RESIZE & INPUT EVENT LISTENERS
+   ============================================================================ */
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+window.addEventListener('keydown', (e) => {
+  keys[e.code] = true;
+
+  // Konami Code detector
+  if (e.code === KONAMI_SEQ[konamiIndex]) {
+    konamiIndex++;
+    if (konamiIndex >= KONAMI_SEQ.length) {
+      konamiIndex = 0;
+      unlockSecretFirearms();
+    }
+  } else {
+    konamiIndex = 0;
+  }
+
+  // Typing secret words during gameplay (GUNS, RAMBO, DISCO, GNOMEKING)
+  if (e.key && e.key.length === 1 && !activeModal) {
+    keyBuffer = (keyBuffer + e.key.toUpperCase()).slice(-12);
+    if (keyBuffer.endsWith('GUNS') || keyBuffer.endsWith('RAMBO')) {
+      unlockSecretFirearms();
+      keyBuffer = '';
+    } else if (keyBuffer.endsWith('DISCO')) {
+      redeemSecretCode('DISCO');
+      keyBuffer = '';
+    } else if (keyBuffer.endsWith('GNOMEKING')) {
+      redeemSecretCode('GNOMEKING');
+      keyBuffer = '';
+    }
+  }
+
+  if (e.code === 'Escape') {
+    closeModals();
+    return;
+  }
+
+  if (activeModal) return;
+
+  if ((e.code === 'KeyW' || e.code === 'Space') && player) {
+    player.jump();
+  } else if (e.code === 'KeyE') {
+    tryInteract();
+  } else if (e.code === 'KeyT') {
+    talkToNearestGnome();
+  } else if (e.code === 'KeyK' || e.code === 'KeyG') {
+    placePlatformTile();
+  } else if (e.code.startsWith('Digit')) {
+    const num = parseInt(e.code.replace('Digit', ''), 10);
+    if (num >= 1 && num <= 9) selectHotbarIndex(num - 1);
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  keys[e.code] = false;
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+});
+
+canvas.addEventListener('mousedown', (e) => {
+  // Check if clicking the Pixel Moon in the top-right sky (7 clicks = Secret Firearms!)
+  const moonX = canvas.width - 90;
+  const moonY = 82;
+  if (Math.hypot(e.clientX - moonX, e.clientY - moonY) < 28) {
+    moonClickCount++;
+    sfx.play('coin');
+    if (moonClickCount === 7) {
+      awardTrophy('moon_gazer');
+      unlockSecretFirearms();
+    }
+    return;
+  }
+
+  if (e.button === 0) {
+    mouse.leftDown = true;
+    if (player && !activeModal) player.castActiveSpell();
+  } else if (e.button === 2) {
+    mouse.rightDown = true;
+    if (player && !activeModal) placePlatformTile();
+  }
+});
+
+window.addEventListener('mouseup', (e) => {
+  if (e.button === 0) mouse.leftDown = false;
+  if (e.button === 2) mouse.rightDown = false;
+});
+
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// Top HUD & Touch Buttons
+const muteBtnEl = document.getElementById('muteBtn');
+if (muteBtnEl) {
+  muteBtnEl.addEventListener('click', () => {
+    toggleSoundSetting();
+    muteBtnEl.textContent = sfx.muted ? '🔇 MUTE' : '🔊 SFX';
+  });
+}
+const menuBtnEl = document.getElementById('menuBtn');
+if (menuBtnEl) {
+  menuBtnEl.addEventListener('click', returnToMainMenu);
+}
+const promptBannerEl = document.getElementById('interactPrompt');
+if (promptBannerEl) {
+  promptBannerEl.addEventListener('click', tryInteract);
+}
+
+const bindTouch = (id, keyName, tapFn) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (keyName) keys[keyName] = true;
+    if (tapFn) tapFn();
+  });
+  el.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (keyName) keys[keyName] = false;
+  });
+};
+bindTouch('touchLeft', 'TouchLeft');
+bindTouch('touchRight', 'TouchRight');
+bindTouch('touchJump', 'TouchJump', () => player && player.jump());
+bindTouch('touchInteract', null, tryInteract);
+
+function getMaxGnomeCap() {
+  return DIFFICULTY_TIERS[selectedDifficultyId].gnomeCap;
+}
+
+function spawnCompanionGnome(x, y, roleKey = 'pikeman') {
+  if (gnomes.length >= getMaxGnomeCap()) return false;
+  const g = new GnomeCompanion(x, y, roleKey);
+  g.say(`Reporting for duty, Wizard!`);
+  gnomes.push(g);
+  sfx.play('gnome');
+  updateHUD();
+  return true;
+}
+
+function talkToNearestGnome() {
+  // Strictly block talking to Gnomes when the player has 0 Gnome allies!
+  if (!player || gnomes.length === 0) {
+    const banner = document.getElementById('gnomeChatBanner');
+    if (banner) banner.classList.add('hidden');
+    return;
+  }
+
+  let nearest = gnomes[0];
+  let bestDist = Infinity;
+  for (const g of gnomes) {
+    const d = Math.hypot(g.x - player.x, g.y - player.y);
+    if (d < bestDist) {
+      bestDist = d;
+      nearest = g;
+    }
+  }
+
+  const line = GNOME_DIALOGUES[Math.floor(Math.random() * GNOME_DIALOGUES.length)];
+  nearest.say('💬 Chatting!', 140);
+  sfx.play('gnome');
+
+  // 25% chance a happy Gnome tosses the Wizard a lucky coin gift (cooldown gated)
+  if (Math.random() < 0.25) {
+    player.coins += 5;
+    addFloatingText(nearest.x, nearest.y - 14, '+5 Lucky Gnome Coin!', '#fbbf24');
+    updateHUD();
+  }
+
+  const banner = document.getElementById('gnomeChatBanner');
+  document.getElementById('gnomeSpeakerName').textContent = `🧝 ${nearest.name.toUpperCase()} (${nearest.roleName.toUpperCase()})`;
+  document.getElementById('gnomeSpeechText').textContent = `"${line}"`;
+  banner.classList.remove('hidden');
+
+  if (gnomeSpeechTimeout) clearTimeout(gnomeSpeechTimeout);
+  gnomeSpeechTimeout = setTimeout(() => {
+    banner.classList.add('hidden');
+  }, 5200);
+}
+
+/* ============================================================================
+   TROLL ENEMY CLASS (SCALED BY DIFFICULTY & WORLD LEVEL)
+   ============================================================================ */
+class Troll {
+  constructor(x, y, type, castleIndex) {
+    this.x = x;
+    this.y = y;
+    this.type = type;
+    this.castleIndex = castleIndex;
+
+    const scale = type === 'king' ? 1.65 : type === 'chieftain' ? 1.3 : 1.0;
+    this.w = Math.floor(24 * scale);
+    this.h = Math.floor(34 * scale);
+
+    const tier = DIFFICULTY_TIERS[selectedDifficultyId];
+    const levelMult = 1 + (currentLevelNum - 1) * 0.06;
+
+    const rawHp = type === 'king' ? 440 : type === 'chieftain' ? 210 : type === 'thrower' ? 95 : 115;
+    const rawDmg = type === 'king' ? 24 : type === 'chieftain' ? 18 : 13;
+
+    this.maxHp = Math.floor(rawHp * tier.trollHpMult * levelMult);
+    this.hp = this.maxHp;
+    this.dmg = Math.max(5, Math.floor(rawDmg * tier.trollDmgMult * (1 + (currentLevelNum - 1) * 0.03)));
+
+    this.vx = 0;
+    this.vy = 0;
+    this.facing = -1;
+    this.onGround = false;
+    this.chillTimer = 0;
+    this.attackCooldown = 45;
+    this.windupTimer = 0;
+    this.windupAction = null;
+  }
+
+  update() {
+    const distToPlayer = Math.hypot((player.x - this.x), (player.y - this.y));
+    if (distToPlayer > 680) return;
+
+    const chillFactor = this.chillTimer > 0 ? 0.4 : 1.0;
+    if (this.chillTimer > 0) this.chillTimer -= gameSpeed;
+    if (this.attackCooldown > 0) this.attackCooldown -= gameSpeed;
+
+    if (this.windupTimer > 0) {
+      this.windupTimer -= gameSpeed;
+      this.vx *= 0.6;
+      if (this.windupTimer <= 0) {
+        if (this.windupAction === 'throw') {
+          const angle = Math.atan2((player.y - 6) - this.y, player.x - this.x);
+          projectiles.push({
+            x: this.x + this.w / 2,
+            y: this.y + 10,
+            vx: Math.cos(angle) * 3.5,
+            vy: Math.sin(angle) * 3.5 - 1.1,
+            spellId: 'trollRock',
+            dmg: this.dmg,
+            color: '#94a3b8',
+            life: 145,
+            enemyProj: true
+          });
+        } else if (this.windupAction === 'club') {
+          this.vx = this.facing * 3.2 * chillFactor * gameSpeed;
+        }
+        this.windupAction = null;
+      }
+    } else {
+      const baseSpd = this.type === 'king' ? 0.98 : this.type === 'chieftain' ? 0.92 : 1.08;
+      const moveSpd = baseSpd * chillFactor * gameSpeed;
+
+      if (distToPlayer < 420) {
+        this.facing = player.x > this.x ? 1 : -1;
+        if (this.type === 'thrower' && distToPlayer < 200 && distToPlayer > 75) {
+          this.vx *= 0.8;
+        } else {
+          this.vx = this.facing * moveSpd;
+        }
+
+        if ((this.type === 'thrower' || this.type === 'king') && this.attackCooldown <= 0 && distToPlayer < 330) {
+          this.windupTimer = 38;
+          this.windupAction = 'throw';
+          this.attackCooldown = this.type === 'king' ? 125 : 155;
+        } else if ((this.type === 'grunt' || this.type === 'chieftain') && this.attackCooldown <= 0 && distToPlayer < 65) {
+          this.windupTimer = 28;
+          this.windupAction = 'club';
+          this.attackCooldown = 95;
+        }
+      } else {
+        if (frameCount % 140 === 0) this.facing *= -1;
+        this.vx = this.facing * 0.42 * chillFactor * gameSpeed;
+      }
+    }
+
+    this.vy = Math.min(this.vy + 0.27 * gameSpeed, 7.2 * gameSpeed);
+
+    this.x += this.vx;
+    if (this.resolveCollisions(true) && this.onGround) {
+      this.vy = -5.8;
+      this.onGround = false;
+    }
+
+    this.y += this.vy;
+    this.onGround = false;
+    this.resolveCollisions(false);
+
+    if (
+      this.x < player.x + player.w &&
+      this.x + this.w > player.x &&
+      this.y < player.y + player.h &&
+      this.y + this.h > player.y
+    ) {
+      player.takeDamage(this.dmg);
+    }
+  }
+
+  resolveCollisions(horizontal) {
+    let hitWall = false;
+    const startX = Math.floor(this.x / TILE_SIZE);
+    const endX = Math.floor((this.x + this.w - 0.01) / TILE_SIZE);
+    const startY = Math.floor(this.y / TILE_SIZE);
+    const endY = Math.floor((this.y + this.h - 0.01) / TILE_SIZE);
+
+    for (let ty = startY; ty <= endY; ty++) {
+      for (let tx = startX; tx <= endX; tx++) {
+        const t = getTile(tx, ty);
+        if (isSolidTile(t)) {
+          if (horizontal) {
+            if (this.vx > 0) this.x = tx * TILE_SIZE - this.w;
+            else if (this.vx < 0) this.x = (tx + 1) * TILE_SIZE;
+            this.vx = 0;
+            hitWall = true;
+          } else {
+            if (this.vy > 0) {
+              this.y = ty * TILE_SIZE - this.h;
+              this.vy = 0;
+              this.onGround = true;
+            } else if (this.vy < 0) {
+              this.y = (ty + 1) * TILE_SIZE;
+              this.vy = 0;
+            }
+          }
+        } else if (!horizontal && t === TILES.WOOD_PLATFORM && this.vy > 0) {
+          const prevBottom = (this.y - this.vy) + this.h;
+          if (prevBottom <= ty * TILE_SIZE + 6) {
+            this.y = ty * TILE_SIZE - this.h;
+            this.vy = 0;
+            this.onGround = true;
+          }
+        }
+      }
+    }
+    return hitWall;
+  }
+
+  takeDamage(rawDmg, spellId) {
+    let dmg = rawDmg;
+    let isCrit = false;
+    const critChance = player.hasRelic('prism') * 0.30;
+    if (Math.random() < critChance) {
+      dmg = Math.floor(dmg * 2);
+      isCrit = true;
+    }
+
+    this.hp -= dmg;
+    sfx.play('hit');
+
+    if (spellId === 'frost') this.chillTimer = 210;
+    if (spellId === 'tornado') {
+      this.vy = -4.8;
+      this.vx = (this.x > player.x ? 1 : -1) * 5.5;
+    }
+
+    if (player.hasRelic('chalice')) {
+      const heal = Math.max(1, Math.floor(dmg * 0.12 * player.hasRelic('chalice')));
+      player.hp = Math.min(player.maxHp, player.hp + heal);
+    }
+
+    addFloatingText(
+      this.x + this.w / 2,
+      this.y - 8,
+      isCrit ? `CRIT ${dmg}!` : `${dmg}`,
+      isCrit ? '#facc15' : '#ffffff'
+    );
+    spawnParticles(this.x + this.w / 2, this.y + this.h / 2, '#4ade80', 5);
+
+    if (this.hp <= 0) {
+      sfx.play('trollDie');
+      spawnParticles(this.x + this.w / 2, this.y + this.h / 2, '#16a34a', 12);
+      // Tighter, more rewarding coin drops so spells feel earned across multiple stages
+      const baseCoins = this.type === 'king' ? 75 : this.type === 'chieftain' ? 28 : 11;
+      const mult = 1 + player.hasRelic('crown') * 0.5;
+      spawnCoinCluster(this.x + this.w / 2, this.y + this.h / 2, Math.floor(baseCoins * mult));
+
+      setTimeout(() => checkCastleClearStatus(this.castleIndex), 20);
+    }
+  }
+
+  draw(ctx) {
+    const px = Math.floor(this.x);
+    const py = Math.floor(this.y);
+
+    ctx.save();
+    ctx.translate(px + this.w / 2, py + this.h / 2);
+    ctx.scale(this.facing, 1);
+
+    const w2 = this.w / 2;
+    const h2 = this.h / 2;
+
+    const isWindingUp = this.windupTimer > 0 && Math.floor(this.windupTimer / 4) % 2 === 0;
+    ctx.fillStyle = isWindingUp
+      ? '#f97316'
+      : this.chillTimer > 0
+      ? '#38bdf8'
+      : this.type === 'king'
+      ? '#15803d'
+      : this.type === 'chieftain'
+      ? '#3f6212'
+      : '#4d7c0f';
+    ctx.fillRect(-w2 + 2, -h2 + 6, this.w - 4, this.h - 6);
+
+    ctx.fillStyle = this.type === 'king' ? '#7e22ce' : '#78350f';
+    ctx.fillRect(-w2 + 2, 2, this.w - 4, h2 - 4);
+
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(2, -h2 + 10, 4, 3);
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(4, -h2 + 16, 3, 4);
+
+    if (this.type === 'king') {
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(-w2 + 3, -h2 - 4, this.w - 6, 6);
+      ctx.fillRect(-w2 + 3, -h2 - 8, 4, 4);
+      ctx.fillRect(w2 - 7, -h2 - 8, 4, 4);
+    } else if (this.type === 'chieftain') {
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillRect(-w2, -h2 + 2, 4, 6);
+      ctx.fillRect(w2 - 4, -h2 + 2, 4, 6);
+    }
+
+    ctx.fillStyle = '#713f12';
+    const swing = this.windupTimer > 0 ? -12 : Math.sin(frameCount * 0.09) * 3;
+    ctx.fillRect(w2 - 2, -6 + swing, 8, 18);
+
+    ctx.restore();
+
+    if (this.windupTimer > 0) {
+      ctx.fillStyle = '#facc15';
+      ctx.font = 'bold 16px monospace';
+      ctx.fillText('⚠️!', px + this.w / 2 - 10, py - 16);
+    }
+
+    if (this.hp < this.maxHp || this.type === 'king' || this.type === 'chieftain') {
+      const barW = Math.max(28, this.w);
+      const bx = px + this.w / 2 - barW / 2;
+      const by = py - 11;
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(bx - 1, by - 1, barW + 2, 6);
+      ctx.fillStyle = this.type === 'king' ? '#a855f7' : '#ef4444';
+      ctx.fillRect(bx, by, (this.hp / this.maxHp) * barW, 4);
+    }
+  }
+}
+
+/* ============================================================================
+   PROCEDURAL BIOME & CASTLE GENERATOR (SPACIOUS CLEARINGS & GRAND FINAL CASTLE)
+   ============================================================================ */
+function generateBiomeWorld(lvlNum) {
+  const numCastles = Math.floor(Math.random() * 5) + 2; // Random 2 to 6 castles
+  const segmentWidth = 96; // Spacious distance between castles so structures never feel congested
+  worldWidth = 42 + numCastles * segmentWidth + 60;
+
+  tileMap = Array.from({ length: WORLD_HEIGHT }, () => Array(worldWidth).fill(TILES.AIR));
+  castles = [];
+  interactables = [];
+  trolls = [];
+  projectiles = [];
+  particles = [];
+  coins = [];
+  floatingTexts = [];
+  backgroundTrees = [];
+
+  // Base terrain generation
+  for (let x = 0; x < worldWidth; x++) {
+    const hill = Math.round(Math.sin(x * 0.06) * 1.5);
+    const surfaceY = (x < 26) ? GROUND_Y : GROUND_Y + hill;
+
+    for (let y = surfaceY; y < WORLD_HEIGHT; y++) {
+      if (y === WORLD_HEIGHT - 1) tileMap[y][x] = TILES.BEDROCK;
+      else if (y === surfaceY) tileMap[y][x] = TILES.GRASS;
+      else if (y < surfaceY + 4) tileMap[y][x] = TILES.DIRT;
+      else tileMap[y][x] = TILES.STONE;
+    }
+
+    if (x > 8 && x % 6 === 0 && Math.random() < 0.65) {
+      backgroundTrees.push({
+        x: x * TILE_SIZE,
+        y: surfaceY * TILE_SIZE,
+        h: 64 + Math.floor(Math.random() * 45)
+      });
+    }
+  }
+
+  let villageSpawnedCount = 0;
+  let gambleSpawnedCount = 0;
+
+  // Build Castles & Spacious Between-Castle Clearings
+  for (let i = 0; i < numCastles; i++) {
+    const cStartX = 30 + i * segmentWidth;
+    const isFinalCastle = (i === numCastles - 1);
+    // Final Castle of each sublevel is significantly wider and taller than normal castles!
+    const cWidth = isFinalCastle ? 52 : 32;
+    const cHeight = isFinalCastle ? 20 : 13;
+    const cEndX = cStartX + cWidth;
+
+    // Flatten ground under castle & clearing
+    for (let x = cStartX - 5; x < cEndX + 54 && x < worldWidth; x++) {
+      for (let y = 0; y < WORLD_HEIGHT - 1; y++) {
+        if (y < GROUND_Y) tileMap[y][x] = TILES.AIR;
+        else if (y === GROUND_Y) tileMap[y][x] = (x >= cStartX && x <= cEndX) ? TILES.CASTLE_BRICK : TILES.GRASS;
+        else if (y < GROUND_Y + 4) tileMap[y][x] = TILES.DIRT;
+        else tileMap[y][x] = TILES.STONE;
+      }
+    }
+
+    const cTopY = GROUND_Y - cHeight;
+    for (let y = cTopY; y < GROUND_Y; y++) {
+      for (let x = cStartX; x <= cEndX; x++) {
+        if (y === cTopY) {
+          tileMap[y][x] = (x % 2 === 0) ? TILES.CASTLE_BRICK : TILES.AIR;
+        } else if (y === cTopY + 1) {
+          tileMap[y][x] = TILES.CASTLE_BRICK;
+        } else if (x === cStartX || x === cEndX) {
+          if (y >= GROUND_Y - 3) tileMap[y][x] = TILES.IRON_DOOR;
+          else tileMap[y][x] = TILES.CASTLE_BRICK;
+        } else {
+          tileMap[y][x] = TILES.CASTLE_BG;
+        }
+      }
+    }
+
+    // Internal platforms & torches (Grand Final Castle gets 2 upper battle tiers!)
+    const midY = GROUND_Y - 6;
+    for (let x = cStartX + 4; x <= cEndX - 4; x++) {
+      if (x % 7 !== 0) tileMap[midY][x] = TILES.WOOD_PLATFORM;
+    }
+    if (isFinalCastle) {
+      const upperY = GROUND_Y - 12;
+      for (let x = cStartX + 6; x <= cEndX - 6; x++) {
+        if (x % 8 !== 0) tileMap[upperY][x] = TILES.WOOD_PLATFORM;
+      }
+      tileMap[upperY - 3][cStartX + 12] = TILES.TORCH;
+      tileMap[upperY - 3][cEndX - 12] = TILES.TORCH;
+    }
+
+    tileMap[GROUND_Y - 4][cStartX + 6] = TILES.TORCH;
+    tileMap[GROUND_Y - 4][cEndX - 6] = TILES.TORCH;
+    tileMap[midY - 3][Math.floor((cStartX + cEndX) / 2)] = TILES.TORCH;
+
+    // Spawn Trolls scaled by difficulty (and extra guards inside the Grand Final Castle)
+    const tier = DIFFICULTY_TIERS[selectedDifficultyId];
+    const isNightmare = (selectedDifficultyId === 'nightmare');
+    const finalBonus = isFinalCastle ? (isNightmare ? 8 : 3) : 0;
+    const numGrunts = 2 + Math.min(2, i) + tier.trollCountBonus + finalBonus;
+
+    for (let g = 0; g < numGrunts; g++) {
+      const tx = (cStartX + 4 + ((g * 3) % (cWidth - 8))) * TILE_SIZE;
+      const tierRow = (isFinalCastle && g % 3 === 2) ? (GROUND_Y - 14) : (g % 2 === 0 ? GROUND_Y - 2 : midY - 2);
+      const ty = tierRow * TILE_SIZE;
+      const tType = (isNightmare && g % 5 === 0) ? 'chieftain' : (g % 2 === 0 ? 'grunt' : 'thrower');
+      trolls.push(new Troll(tx, ty, tType, i));
+    }
+
+    // Grand Final Castle has extra Chieftain bodyguards (and Twin Troll Kings on Nightmare!)
+    if (isFinalCastle && tier.trollCountBonus >= 2) {
+      trolls.push(new Troll((cStartX + Math.floor(cWidth * 0.45)) * TILE_SIZE, (GROUND_Y - 3) * TILE_SIZE, 'chieftain', i));
+    }
+    if (isFinalCastle && isNightmare) {
+      trolls.push(new Troll((cStartX + Math.floor(cWidth * 0.35)) * TILE_SIZE, (GROUND_Y - 9) * TILE_SIZE, 'king', i));
+      trolls.push(new Troll((cStartX + Math.floor(cWidth * 0.6)) * TILE_SIZE, (GROUND_Y - 9) * TILE_SIZE, 'chieftain', i));
+    }
+
+    const bossX = (cStartX + cWidth - 9) * TILE_SIZE;
+    const bossY = (GROUND_Y - 3) * TILE_SIZE;
+    trolls.push(new Troll(bossX, bossY, isFinalCastle ? 'king' : 'chieftain', i));
+
+    const cageX = (cStartX + cWidth - 4) * TILE_SIZE;
+    const cageY = (GROUND_Y - 2) * TILE_SIZE;
+    interactables.push({
+      type: isFinalCastle ? 'queenCage' : 'decoyCage',
+      x: cageX,
+      y: cageY,
+      castleIndex: i,
+      used: false
+    });
+
+    castles.push({
+      index: i,
+      startX: cStartX,
+      endX: cEndX,
+      isFinal: isFinalCastle,
+      cleared: false
+    });
+
+    // Uncongested Between-Castle Clearing: Pick at most 1 main landmark + 1 small chest/camp with wide spacing
+    if (!isFinalCastle) {
+      const clearingStart = cEndX + 10;
+
+      // Slot A (Left side of clearing): either a Relic Chest OR a Gnome Camp (never stacked together)
+      if (i % 2 === 0) {
+        interactables.push({
+          type: 'relicChest',
+          x: (clearingStart + 6) * TILE_SIZE,
+          y: (GROUND_Y - 1) * TILE_SIZE,
+          used: false
+        });
+      } else {
+        interactables.push({
+          type: 'gnomeCamp',
+          x: (clearingStart + 6) * TILE_SIZE,
+          y: (GROUND_Y - 1) * TILE_SIZE,
+          roleKey: ['pikeman', 'archer', 'pyro', 'cleric'][(i + lvlNum) % 4],
+          used: false
+        });
+      }
+
+      // Slot B (Right side of clearing, 26 tiles away): Either a Village OR a Gamble Tavern, never both in the same clearing!
+      const forceLandmark = (i === numCastles - 2 && villageSpawnedCount === 0 && gambleSpawnedCount === 0);
+      if (forceLandmark || Math.random() < 0.55) {
+        const placeVillage = (villageSpawnedCount <= gambleSpawnedCount);
+        if (placeVillage) {
+          villageSpawnedCount++;
+          interactables.push({
+            type: 'villageShop',
+            x: (clearingStart + 32) * TILE_SIZE,
+            y: (GROUND_Y - 1) * TILE_SIZE,
+            used: false
+          });
+        } else {
+          gambleSpawnedCount++;
+          interactables.push({
+            type: 'gambleShrine',
+            x: (clearingStart + 32) * TILE_SIZE,
+            y: (GROUND_Y - 1) * TILE_SIZE,
+            used: false
+          });
+        }
+      }
+    }
+  }
+
+  // Reposition Wizard & Hired Gnomes at start of the new Stage
+  if (player) {
+    player.x = 6 * TILE_SIZE;
+    player.y = (GROUND_Y - 3) * TILE_SIZE;
+    player.vx = 0;
+    player.vy = 0;
+    player.hp = player.maxHp;
+    player.mana = player.maxMana;
+  }
+  gnomes.forEach((g, idx) => {
+    g.x = (4 + (idx % 3)) * TILE_SIZE;
+    g.y = (GROUND_Y - 3) * TILE_SIZE;
+    g.vx = 0;
+    g.vy = 0;
+  });
+
+  renderHotbar();
+  updateHUD();
+  buildMinimapDOM();
+}
+
+function resetSpellsForNewCampaign() {
+  Object.values(SPELL_CATALOG).forEach(s => {
+    s.unlocked = (s.id === 'pickaxe' || s.id === 'bolt' || s.id === 'fireball') || (secretGunsUnlocked && (s.id === 'pistol' || s.id === 'ar' || s.id === 'rpg'));
+  });
+}
+
+function retryCurrentWorld() {
+  closeModals();
+  if (player) {
+    player.hp = player.maxHp;
+    player.mana = player.maxMana;
+  }
+  launchLevelWithNESTransition(currentLevelNum);
+}
+
+function advanceToNextLevel() {
+  closeModals();
+  if (selectedDifficultyId === 'nightmare') {
+    awardTrophy('nightmare_slayer');
+  }
+  if (currentLevelNum >= TOTAL_STAGES) {
+    sfx.play('win');
+    saveFullGameState(false);
+    showSummaryModal(
+      '👑🏆',
+      'ALL 5 WORLDS (50 STAGES) COMPLETE!',
+      `You conquered all 50 stages on ${DIFFICULTY_TIERS[selectedDifficultyId].name} Difficulty and rescued Queen Aurelia from the Troll Emperor!`,
+      true
+    );
+    return;
+  }
+  launchLevelWithNESTransition(currentLevelNum + 1);
+  saveFullGameState(false);
+}
+
+/* ============================================================================
+   TILE HELPERS, MINING & PLATFORM BUILDING
+   ============================================================================ */
+function getTile(tx, ty) {
+  if (ty < 0 || ty >= WORLD_HEIGHT || tx < 0 || tx >= worldWidth) return TILES.BEDROCK;
+  return tileMap[ty][tx];
+}
+
+function isSolidTile(t) {
+  return (
+    t === TILES.GRASS ||
+    t === TILES.DIRT ||
+    t === TILES.STONE ||
+    t === TILES.CASTLE_BRICK ||
+    t === TILES.BEDROCK ||
+    t === TILES.IRON_DOOR
+  );
+}
+
+// Helper that ensures breaking Castle Doors or 3-block tall entryways never leaves a floating middle block!
+function breakTileAndCheckDoorway(tx, ty) {
+  const brokenType = getTile(tx, ty);
+  tileMap[ty][tx] = TILES.AIR;
+
+  // 1. If the player hits ANY part of an Iron Castle Door, shatter the entire vertical door column immediately
+  if (brokenType === TILES.IRON_DOOR) {
+    for (let dy = -3; dy <= 3; dy++) {
+      if (getTile(tx, ty + dy) === TILES.IRON_DOOR) {
+        tileMap[ty + dy][tx] = TILES.CASTLE_BG;
+      }
+    }
+  }
+
+  // 2. If the top and bottom blocks around a middle block are already broken (or if breaking this block leaves a single floating middle block), auto-break the middle block!
+  const checkMiddleCollapse = (cx, cy) => {
+    const mid = getTile(cx, cy);
+    if (mid !== TILES.AIR && mid !== TILES.BEDROCK && mid !== TILES.CASTLE_BG && mid !== TILES.WOOD_PLATFORM) {
+      const aboveOpen = !isSolidTile(getTile(cx, cy - 1));
+      const belowOpen = !isSolidTile(getTile(cx, cy + 1));
+      if (aboveOpen && belowOpen) {
+        tileMap[cy][cx] = (mid === TILES.IRON_DOOR || mid === TILES.CASTLE_BRICK) ? TILES.CASTLE_BG : TILES.AIR;
+        spawnParticles(cx * TILE_SIZE + 12, cy * TILE_SIZE + 12, '#fbbf24', 5);
+      }
+    }
+  };
+
+  // Check the block directly above and below the mined tile in case it is now isolated in the middle
+  checkMiddleCollapse(tx, ty - 1);
+  checkMiddleCollapse(tx, ty + 1);
+}
+
+function mineTileAtCursor() {
+  if (!player) return;
+
+  // In Keyboard-Only Mode, find the closest breakable tile along the aim vector so mining is effortless
+  if (controlScheme === 'keyboard') {
+    const cx = player.x + player.w / 2;
+    const cy = player.y + 12;
+    let aimDX = 0;
+    let aimDY = 0;
+    if (keys['ArrowLeft']) aimDX -= 1;
+    if (keys['ArrowRight']) aimDX += 1;
+    if (keys['ArrowUp']) aimDY -= 1;
+    if (keys['ArrowDown']) aimDY += 1;
+    if (aimDX === 0 && aimDY === 0) aimDX = player.facing;
+
+    // Scan a 3-row vertical band in front of the Wizard so 3-block tall walls & doors clear smoothly
+    const angle = Math.atan2(aimDY, aimDX);
+    for (let dist = 12; dist <= 78; dist += 10) {
+      const checkX = cx + Math.cos(angle) * dist;
+      const checkY = cy + Math.sin(angle) * dist;
+      const tx = Math.floor(checkX / TILE_SIZE);
+      const baseTy = Math.floor(checkY / TILE_SIZE);
+
+      // Check target row first, then head/foot rows if aiming horizontally
+      const rowsToTry = aimDY === 0 ? [baseTy, baseTy - 1, baseTy + 1] : [baseTy];
+      for (const ty of rowsToTry) {
+        const t = getTile(tx, ty);
+        if (t !== TILES.AIR && t !== TILES.BEDROCK && t !== TILES.CASTLE_BG) {
+          breakTileAndCheckDoorway(tx, ty);
+          player.blocks++;
+          sfx.play('dig');
+          spawnParticles(tx * TILE_SIZE + 12, ty * TILE_SIZE + 12, '#a8a29e', 5);
+          updateHUD();
+          return;
+        }
+      }
+    }
+    return;
+  }
+
+  const tx = Math.floor(mouse.worldX / TILE_SIZE);
+  const ty = Math.floor(mouse.worldY / TILE_SIZE);
+  const dist = Math.hypot((player.x + player.w / 2) - mouse.worldX, (player.y + player.h / 2) - mouse.worldY);
+  if (dist > 145) {
+    addFloatingText(mouse.worldX, mouse.worldY, 'TOO FAR', '#94a3b8');
+    return;
+  }
+  const t = getTile(tx, ty);
+  if (t !== TILES.AIR && t !== TILES.BEDROCK && t !== TILES.CASTLE_BG) {
+    breakTileAndCheckDoorway(tx, ty);
+    player.blocks++;
+    sfx.play('dig');
+    spawnParticles(tx * TILE_SIZE + 12, ty * TILE_SIZE + 12, '#a8a29e', 5);
+    updateHUD();
+  }
+}
+
+function placePlatformTile() {
+  if (!player || player.blocks <= 0) {
+    if (player) addFloatingText(player.x, player.y - 10, 'NO BLOCKS!', '#f87171');
+    return;
+  }
+  const tx = Math.floor(mouse.worldX / TILE_SIZE);
+  const ty = Math.floor(mouse.worldY / TILE_SIZE);
+  const dist = Math.hypot((player.x + player.w / 2) - mouse.worldX, (player.y + player.h / 2) - mouse.worldY);
+  if (dist > 165) return;
+
+  const current = getTile(tx, ty);
+  if (current === TILES.AIR || current === TILES.CASTLE_BG) {
+    tileMap[ty][tx] = TILES.WOOD_PLATFORM;
+    player.blocks--;
+    sfx.play('dig');
+    spawnParticles(tx * TILE_SIZE + 12, ty * TILE_SIZE + 12, '#d97706', 4);
+    updateHUD();
+  }
+}
+
+function checkCastleClearStatus(castleIdx) {
+  const c = castles[castleIdx];
+  if (!c || c.cleared) return;
+  const remaining = trolls.filter(t => t.castleIndex === castleIdx && t.hp > 0);
+  if (remaining.length === 0) {
+    c.cleared = true;
+    sfx.play('win');
+    awardTrophy('first_castle');
+    for (let y = 0; y < WORLD_HEIGHT; y++) {
+      if (tileMap[y][c.startX] === TILES.IRON_DOOR) tileMap[y][c.startX] = TILES.CASTLE_BG;
+      if (tileMap[y][c.endX] === TILES.IRON_DOOR) tileMap[y][c.endX] = TILES.CASTLE_BG;
+    }
+    addFloatingText(
+      player.x,
+      player.y - 24,
+      c.isFinal ? 'FINAL CASTLE CLEARED! FREE THE QUEEN!' : `CASTLE #${castleIdx + 1} CLEARED! DOORS OPEN!`,
+      '#4ade80'
+    );
+    saveFullGameState(false);
+    updateHUD();
+  }
+}
+
+/* ============================================================================
+   PROJECTILES, PARTICLES & COINS UPDATE
+   ============================================================================ */
+function triggerExplosionAoE(cx, cy, radius, baseDmg) {
+  sfx.play('meteor');
+  spawnParticles(cx, cy, '#ef4444', 14);
+  spawnParticles(cx, cy, '#facc15', 10);
+
+  // Blast nearby breakable tiles & castle doors
+  const centerTx = Math.floor(cx / TILE_SIZE);
+  const centerTy = Math.floor(cy / TILE_SIZE);
+  for (let dy = -2; dy <= 2; dy++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      const tx = centerTx + dx;
+      const ty = centerTy + dy;
+      const t = getTile(tx, ty);
+      if (t === TILES.DIRT || t === TILES.GRASS || t === TILES.IRON_DOOR || t === TILES.WOOD_PLATFORM) {
+        breakTileAndCheckDoorway(tx, ty);
+      }
+    }
+  }
+
+  // Damage all Trolls within the blast radius
+  for (let j = trolls.length - 1; j >= 0; j--) {
+    const tr = trolls[j];
+    const dist = Math.hypot((tr.x + tr.w / 2) - cx, (tr.y + tr.h / 2) - cy);
+    if (dist <= radius) {
+      tr.takeDamage(Math.floor(baseDmg * 0.75), 'rpg');
+      if (tr.hp <= 0) trolls.splice(j, 1);
+    }
+  }
+}
+
+function updateProjectiles() {
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    const p = projectiles[i];
+    p.life -= gameSpeed;
+    if (p.life <= 0) {
+      projectiles.splice(i, 1);
+      continue;
+    }
+
+    if (p.homing && trolls.length > 0) {
+      let nearest = null;
+      let minDist = 320;
+      for (const tr of trolls) {
+        const d = Math.hypot((tr.x + tr.w / 2) - p.x, (tr.y + tr.h / 2) - p.y);
+        if (d < minDist) {
+          minDist = d;
+          nearest = tr;
+        }
+      }
+      if (nearest) {
+        const targetAngle = Math.atan2((nearest.y + nearest.h / 2) - p.y, (nearest.x + nearest.w / 2) - p.x);
+        p.vx += Math.cos(targetAngle) * 0.32 * gameSpeed;
+        p.vy += Math.sin(targetAngle) * 0.32 * gameSpeed;
+        const spd = Math.hypot(p.vx, p.vy);
+        if (spd > 4.4) {
+          p.vx = (p.vx / spd) * 4.4;
+          p.vy = (p.vy / spd) * 4.4;
+        }
+      }
+    }
+
+    p.x += p.vx * gameSpeed;
+    p.y += p.vy * gameSpeed;
+
+    if (frameCount % 4 === 0) {
+      particles.push({
+        x: p.x,
+        y: p.y,
+        vx: (Math.random() - 0.5) * 0.6,
+        vy: (Math.random() - 0.5) * 0.6,
+        color: p.color,
+        size: p.spellId === 'omega' ? 5 : 3,
+        life: 14
+      });
+    }
+
+    const tx = Math.floor(p.x / TILE_SIZE);
+    const ty = Math.floor(p.y / TILE_SIZE);
+    const hitTile = getTile(tx, ty);
+
+    if (isSolidTile(hitTile)) {
+      if (p.spellId === 'rpg') {
+        triggerExplosionAoE(p.x, p.y, 78, p.dmg);
+      } else if ((p.spellId === 'fireball' || p.spellId === 'meteor' || p.spellId === 'omega') && hitTile !== TILES.BEDROCK) {
+        if (hitTile === TILES.DIRT || hitTile === TILES.GRASS || p.spellId === 'omega') {
+          breakTileAndCheckDoorway(tx, ty);
+        }
+      }
+      spawnParticles(p.x, p.y, p.color, 5);
+      projectiles.splice(i, 1);
+      continue;
+    }
+
+    if (p.enemyProj) {
+      if (p.x > player.x && p.x < player.x + player.w && p.y > player.y && p.y < player.y + player.h) {
+        player.takeDamage(p.dmg);
+        projectiles.splice(i, 1);
+      }
+      continue;
+    }
+
+    for (let j = trolls.length - 1; j >= 0; j--) {
+      const tr = trolls[j];
+      if (p.x > tr.x && p.x < tr.x + tr.w && p.y > tr.y && p.y < tr.y + tr.h) {
+        tr.takeDamage(p.dmg, p.spellId);
+
+        if (p.spellId === 'rpg') {
+          triggerExplosionAoE(p.x, p.y, 78, p.dmg);
+        }
+
+        if (p.spellId === 'lightning') {
+          let arcs = 0;
+          for (const other of trolls) {
+            if (other !== tr && arcs < 3) {
+              const dist = Math.hypot(other.x - tr.x, other.y - tr.y);
+              if (dist < 170) {
+                other.takeDamage(Math.floor(p.dmg * 0.75), 'lightning');
+                spawnLightningArc(tr.x + tr.w / 2, tr.y + tr.h / 2, other.x + other.w / 2, other.y + other.h / 2);
+                arcs++;
+              }
+            }
+          }
+        }
+
+        if (tr.hp <= 0) {
+          trolls.splice(j, 1);
+        }
+
+        p.pierce = (p.pierce || 1) - 1;
+        if (p.pierce <= 0) {
+          projectiles.splice(i, 1);
+          break;
+        }
+      }
+    }
+  }
+}
+
+function spawnLightningArc(x1, y1, x2, y2) {
+  for (let s = 0; s <= 6; s++) {
+    const t = s / 6;
+    particles.push({
+      x: x1 + (x2 - x1) * t + (Math.random() - 0.5) * 8,
+      y: y1 + (y2 - y1) * t + (Math.random() - 0.5) * 8,
+      vx: 0,
+      vy: 0,
+      color: '#fde047',
+      size: 4,
+      life: 18
+    });
+  }
+}
+
+function spawnParticles(x, y, color, count = 5) {
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x,
+      y,
+      vx: (Math.random() - 0.5) * 2.6,
+      vy: (Math.random() - 0.7) * 2.6,
+      color,
+      size: Math.random() < 0.5 ? 4 : 3,
+      life: 22 + Math.floor(Math.random() * 14)
+    });
+  }
+}
+
+function spawnCoinCluster(x, y, totalGold) {
+  const numCoins = Math.min(12, Math.max(3, Math.floor(totalGold / 5)));
+  const valEach = Math.max(1, Math.floor(totalGold / numCoins));
+  for (let i = 0; i < numCoins; i++) {
+    coins.push({
+      x,
+      y,
+      vx: (Math.random() - 0.5) * 3.8,
+      vy: -2.2 - Math.random() * 2.8,
+      val: i === 0 ? totalGold - valEach * (numCoins - 1) : valEach
+    });
+  }
+}
+
+function updateCoinsAndParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const pt = particles[i];
+    pt.x += pt.vx * gameSpeed;
+    pt.y += pt.vy * gameSpeed;
+    pt.life -= gameSpeed;
+    if (pt.life <= 0) particles.splice(i, 1);
+  }
+
+  for (let i = floatingTexts.length - 1; i >= 0; i--) {
+    const ft = floatingTexts[i];
+    ft.y -= 0.42 * gameSpeed;
+    ft.life -= gameSpeed;
+    if (ft.life <= 0) floatingTexts.splice(i, 1);
+  }
+
+  for (let i = coins.length - 1; i >= 0; i--) {
+    const c = coins[i];
+    c.vy = Math.min(c.vy + 0.22 * gameSpeed, 5.5);
+    c.x += c.vx * gameSpeed;
+    c.y += c.vy * gameSpeed;
+
+    const tx = Math.floor(c.x / TILE_SIZE);
+    const ty = Math.floor(c.y / TILE_SIZE);
+    if (isSolidTile(getTile(tx, ty))) {
+      c.y = ty * TILE_SIZE - 4;
+      c.vy = -c.vy * 0.35;
+      c.vx *= 0.75;
+    }
+
+    const dx = (player.x + player.w / 2) - c.x;
+    const dy = (player.y + player.h / 2) - c.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 110) {
+      c.x += (dx / dist) * 3.8 * gameSpeed;
+      c.y += (dy / dist) * 3.8 * gameSpeed;
+    }
+    if (dist < 20) {
+      player.coins += c.val;
+      sfx.play('coin');
+      addFloatingText(player.x, player.y - 12, `+${c.val} G`, '#fbbf24');
+      coins.splice(i, 1);
+      updateHUD();
+    }
+  }
+}
+
+function addFloatingText(x, y, text, color = '#ffffff') {
+  if (!showDamageNumbers && (/^\d+$/.test(text) || text.startsWith('CRIT '))) return;
+  floatingTexts.push({ x, y, text, color, life: 68 });
+}
+
+/* ============================================================================
+   INTERACTABLES: RELIC CHESTS, GNOME CAMPS, GAMBLE TAVERNS, VILLAGES, QUEEN
+   ============================================================================ */
+function getNearestInteractable() {
+  if (!player) return null;
+  let nearest = null;
+  let bestDist = 56;
+  for (const obj of interactables) {
+    if (obj.used && (obj.type === 'relicChest' || obj.type === 'decoyCage' || obj.type === 'gnomeCamp')) continue;
+    const d = Math.hypot((player.x + player.w / 2) - (obj.x + 16), (player.y + player.h / 2) - (obj.y + 12));
+    if (d < bestDist) {
+      bestDist = d;
+      nearest = obj;
+    }
+  }
+  return nearest;
+}
+
+function tryInteract() {
+  const obj = getNearestInteractable();
+  if (!obj) return;
+
+  if (obj.type === 'relicChest') {
+    obj.used = true;
+    const relic = RELIC_POOL[Math.floor(Math.random() * RELIC_POOL.length)];
+    player.relics.push(relic);
+    if (player.relics.length >= 4) awardTrophy('relic_hunter');
+    sfx.play('relic');
+    spawnCoinCluster(obj.x + 12, obj.y, 14);
+    addFloatingText(obj.x, obj.y - 16, `RELIC: ${relic.icon} ${relic.name}!`, '#facc15');
+    saveFullGameState(false);
+    updateHUD();
+  } else if (obj.type === 'gnomeCamp') {
+    if (gnomes.length >= getMaxGnomeCap()) {
+      addFloatingText(obj.x, obj.y - 14, `GNOME ARMY FULL (${getMaxGnomeCap()})!`, '#f87171');
+      return;
+    }
+    const spec = GNOME_CLASSES[obj.roleKey] || GNOME_CLASSES.pikeman;
+    if (player.coins < spec.cost) {
+      addFloatingText(obj.x, obj.y - 14, `NEED ${spec.cost} GOLD TO HIRE!`, '#f87171');
+      return;
+    }
+    player.coins -= spec.cost;
+    obj.used = true;
+    spawnCompanionGnome(obj.x, obj.y - 6, obj.roleKey);
+    if (gnomes.length >= getMaxGnomeCap()) awardTrophy('gnome_commander');
+    addFloatingText(obj.x, obj.y - 18, `HIRED ${spec.name.toUpperCase()}!`, '#4ade80');
+    saveFullGameState(false);
+    updateHUD();
+  } else if (obj.type === 'gambleShrine') {
+    activeShrine = obj;
+    openGambleModal();
+  } else if (obj.type === 'villageShop') {
+    openShopModal();
+  } else if (obj.type === 'decoyCage') {
+    const c = castles[obj.castleIndex];
+    if (!c.cleared) {
+      addFloatingText(obj.x, obj.y - 14, 'DEFEAT CASTLE TROLLS FIRST!', '#f87171');
+      return;
+    }
+    obj.used = true;
+    sfx.play('win');
+    spawnCoinCluster(obj.x + 12, obj.y, 28);
+    // Also rescue a free bonus Gnome if under cap!
+    if (gnomes.length < getMaxGnomeCap()) {
+      spawnCompanionGnome(obj.x, obj.y - 8, 'pikeman');
+      if (gnomes.length >= getMaxGnomeCap()) awardTrophy('gnome_commander');
+      addFloatingText(obj.x, obj.y - 24, 'RESCUED CAPTIVE GNOME! QUEEN IS FURTHER EAST!', '#4ade80');
+    } else {
+      addFloatingText(obj.x, obj.y - 20, 'DECOY CAGE! QUEEN IS IN A FURTHER CASTLE!', '#c084fc');
+    }
+    saveFullGameState(false);
+  } else if (obj.type === 'queenCage') {
+    const c = castles[obj.castleIndex];
+    if (!c.cleared) {
+      addFloatingText(obj.x, obj.y - 14, 'DEFEAT THE TROLL KING FIRST!', '#f87171');
+      return;
+    }
+    awardTrophy('queen_rescued');
+    saveFullGameState(false);
+    openQueenModal();
+  }
+}
+
+/* ============================================================================
+   UI MODALS: GOBLIN GAMBLE TAVERN & VILLAGE BARRACKS/BAZAAR
+   ============================================================================ */
+function openModal(id) {
+  activeModal = id;
+  const el = document.getElementById(id);
+  el.classList.remove('hidden');
+  el.classList.add('flex');
+}
+
+function closeModals() {
+  ['gambleModal', 'shopModal', 'queenModal', 'summaryModal', 'helpModal', 'feedbackModal', 'codexModal', 'saveCodeModal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.add('hidden');
+      el.classList.remove('flex');
+    }
+  });
+  activeModal = null;
+}
+
+function openGambleModal() {
+  openModal('gambleModal');
+  setWager(Math.min(20, Math.max(1, player.coins)));
+  updateGambleModalUI();
+}
+
+function updateGambleModalUI() {
+  document.getElementById('gambleCoinsText').textContent = player.coins;
+  document.getElementById('gambleLuckText').textContent = `+${player.getLuckBonus()}%`;
+  document.getElementById('currentWagerDisplay').textContent = currentWager;
+}
+
+function setWager(val) {
+  if (val === 'half') currentWager = Math.max(1, Math.floor(player.coins / 2));
+  else if (val === 'max') currentWager = Math.max(1, player.coins);
+  else currentWager = Math.min(player.coins, val);
+  updateGambleModalUI();
+}
+
+function playGoblinGame(gameType) {
+  if (player.coins <= 0 || currentWager <= 0 || currentWager > player.coins) {
+    document.getElementById('gambleResultArea').innerHTML = `<p class="text-rose-400 text-lg">Not enough coins in your pouch!</p>`;
+    return;
+  }
+
+  player.coins -= currentWager;
+  const luckBonus = player.getLuckBonus() / 100;
+  let winChance = 0.55;
+  let mult = 2;
+  let title = 'Skull Cups';
+
+  if (gameType === 'dice') {
+    winChance = 0.36;
+    mult = 3;
+    title = 'Arcane Dice';
+  } else if (gameType === 'wheel') {
+    winChance = 0.22;
+    mult = 5;
+    title = 'Blood Wheel';
+  }
+
+  const totalChance = Math.min(0.90, winChance + luckBonus);
+  const won = Math.random() < totalChance;
+  const resBox = document.getElementById('gambleResultArea');
+
+  if (won) {
+    const payout = currentWager * mult;
+    player.coins += payout;
+    sfx.play('win');
+    resBox.innerHTML = `
+      <div class="text-emerald-400 pixel-font text-xs">🎉 WINNER ON ${title.toUpperCase()}!</div>
+      <div class="text-amber-300 text-xl mt-1">You won <strong>+${payout} Gold Coins</strong> (${mult}x)!</div>
+    `;
+  } else {
+    sfx.play('lose');
+    resBox.innerHTML = `
+      <div class="text-rose-400 pixel-font text-xs">💀 GOBLIN HOUSE WINS!</div>
+      <div class="text-slate-300 text-lg mt-1">Lost ${currentWager} Coins on ${title}. Try again?</div>
+    `;
+  }
+
+  currentWager = Math.min(currentWager, Math.max(1, player.coins));
+  updateGambleModalUI();
+  updateHUD();
+}
+
+function openShopModal() {
+  openModal('shopModal');
+  renderShopItems();
+}
+
+function renderShopItems() {
+  document.getElementById('shopCoinsText').textContent = player.coins;
+  document.getElementById('shopGnomeText').textContent = `${gnomes.length} / ${getMaxGnomeCap()}`;
+
+  // 1. Gnome Mercenary Barracks
+  const gnomesGrid = document.getElementById('shopGnomesGrid');
+  gnomesGrid.innerHTML = '';
+  const atCap = gnomes.length >= getMaxGnomeCap();
+
+  Object.values(GNOME_CLASSES).forEach(gSpec => {
+    const canAfford = player.coins >= gSpec.cost && !atCap;
+    const card = document.createElement('div');
+    card.className = 'bg-slate-900 border-2 border-emerald-800/80 p-2.5 flex flex-col justify-between gap-2';
+    card.innerHTML = `
+      <div>
+        <div class="pixel-font text-[9px] text-emerald-300">🧝 ${gSpec.name}</div>
+        <p class="text-sm text-slate-300 mt-1 leading-tight">${gSpec.desc}</p>
+      </div>
+      <button ${!canAfford ? 'disabled' : ''} onclick="hireGnomeFromShop('${gSpec.type}')" class="pixel-btn ${atCap ? 'bg-slate-700' : 'bg-emerald-700'} text-white w-full">
+        ${atCap ? 'ARMY FULL' : `HIRE (${gSpec.cost} G)`}
+      </button>
+    `;
+    gnomesGrid.appendChild(card);
+  });
+
+  // 2. Spells
+  const spellsGrid = document.getElementById('shopSpellsGrid');
+  spellsGrid.innerHTML = '';
+  ['frost', 'lightning', 'homing', 'tornado', 'meteor'].forEach(id => {
+    const sp = SPELL_CATALOG[id];
+    const owned = sp.unlocked;
+    const canAfford = player.coins >= sp.cost;
+
+    const card = document.createElement('div');
+    card.className = 'bg-slate-900 border-2 border-slate-700 p-3 flex flex-col justify-between gap-2';
+    card.innerHTML = `
+      <div>
+        <div class="flex justify-between items-center">
+          <span class="pixel-font text-[10px] text-cyan-300">${sp.icon} ${sp.name}</span>
+          <span class="text-sm text-amber-400 font-bold">${owned ? 'OWNED' : sp.cost + ' G'}</span>
+        </div>
+        <p class="text-base text-slate-300 mt-1">${sp.desc}</p>
+      </div>
+      <button ${owned || !canAfford ? 'disabled' : ''} onclick="buySpell('${sp.id}')" class="pixel-btn ${owned ? 'bg-slate-700' : 'bg-amber-600'} text-white w-full">
+        ${owned ? '✓ IN GRIMOIRE' : `BUY SPELL (${sp.cost} G)`}
+      </button>
+    `;
+    spellsGrid.appendChild(card);
+  });
+
+  // 3. Upgrades (Progressive Price Scaling so players must budget across levels!)
+  const hpCost = 110 + hpUpgradePurchases * 75;
+  const manaCost = 125 + manaUpgradePurchases * 80;
+  const relicCost = 290 + relicUpgradePurchases * 160;
+
+  const upgGrid = document.getElementById('shopUpgradesGrid');
+  upgGrid.innerHTML = `
+    <div class="bg-slate-900 border-2 border-slate-700 p-3 flex flex-col justify-between gap-2">
+      <div>
+        <div class="pixel-font text-[10px] text-rose-400">❤️ ELIXIR OF LIFE</div>
+        <p class="text-base text-slate-300 mt-1">Heal 100% HP + gain +25 Max HP.</p>
+      </div>
+      <button ${player.coins < hpCost ? 'disabled' : ''} onclick="buyUpgrade('hp')" class="pixel-btn bg-rose-700 text-white">${hpCost} GOLD</button>
+    </div>
+    <div class="bg-slate-900 border-2 border-slate-700 p-3 flex flex-col justify-between gap-2">
+      <div>
+        <div class="pixel-font text-[10px] text-sky-400">💧 AETHER FONT</div>
+        <p class="text-base text-slate-300 mt-1">Restore Mana & gain +30 Max MP.</p>
+      </div>
+      <button ${player.coins < manaCost ? 'disabled' : ''} onclick="buyUpgrade('mana')" class="pixel-btn bg-sky-700 text-white">${manaCost} GOLD</button>
+    </div>
+    <div class="bg-slate-900 border-2 border-slate-700 p-3 flex flex-col justify-between gap-2">
+      <div>
+        <div class="pixel-font text-[10px] text-amber-400">🏺 MYSTERY RELIC</div>
+        <p class="text-base text-slate-300 mt-1">Unbox a random Ancient Relic!</p>
+      </div>
+      <button ${player.coins < relicCost ? 'disabled' : ''} onclick="buyUpgrade('relic')" class="pixel-btn bg-purple-700 text-white">${relicCost} GOLD</button>
+    </div>
+  `;
+}
+
+function hireGnomeFromShop(roleKey) {
+  const spec = GNOME_CLASSES[roleKey];
+  if (!spec || player.coins < spec.cost || gnomes.length >= getMaxGnomeCap()) return;
+  player.coins -= spec.cost;
+  spawnCompanionGnome(player.x + (Math.random() - 0.5) * 24, player.y - 8, roleKey);
+  if (gnomes.length >= getMaxGnomeCap()) awardTrophy('gnome_commander');
+  saveFullGameState(false);
+  renderShopItems();
+  updateHUD();
+}
+
+function buySpell(spellId) {
+  const sp = SPELL_CATALOG[spellId];
+  if (!sp || sp.unlocked || player.coins < sp.cost) return;
+  player.coins -= sp.cost;
+  sp.unlocked = true;
+  player.activeSpell = sp.id;
+  sfx.play('win');
+  saveFullGameState(false);
+  renderShopItems();
+  renderHotbar();
+  updateHUD();
+}
+
+function buyUpgrade(type) {
+  const hpCost = 110 + hpUpgradePurchases * 75;
+  const manaCost = 125 + manaUpgradePurchases * 80;
+  const relicCost = 290 + relicUpgradePurchases * 160;
+
+  if (type === 'hp' && player.coins >= hpCost) {
+    player.coins -= hpCost;
+    hpUpgradePurchases++;
+    player.maxHp += 25;
+    player.hp = player.maxHp;
+    sfx.play('relic');
+  } else if (type === 'mana' && player.coins >= manaCost) {
+    player.coins -= manaCost;
+    manaUpgradePurchases++;
+    player.maxMana += 30;
+    player.mana = player.maxMana;
+    sfx.play('relic');
+  } else if (type === 'relic' && player.coins >= relicCost) {
+    player.coins -= relicCost;
+    relicUpgradePurchases++;
+    const relic = RELIC_POOL[Math.floor(Math.random() * RELIC_POOL.length)];
+    player.relics.push(relic);
+    if (player.relics.length >= 4) awardTrophy('relic_hunter');
+    sfx.play('relic');
+  }
+  saveFullGameState(false);
+  renderShopItems();
+  updateHUD();
+}
+
+/* ============================================================================
+   ROYAL CASINO SUITE: BLACKJACK, BACCARAT, 5-CARD DRAW POKER & ALL-IN WHEEL
+   ============================================================================ */
+const SUITS = ['♠', '♥', '♦', '♣'];
+const RANKS = [
+  { label: '2', val: 2, num: 2 },
+  { label: '3', val: 3, num: 3 },
+  { label: '4', val: 4, num: 4 },
+  { label: '5', val: 5, num: 5 },
+  { label: '6', val: 6, num: 6 },
+  { label: '7', val: 7, num: 7 },
+  { label: '8', val: 8, num: 8 },
+  { label: '9', val: 9, num: 9 },
+  { label: '10', val: 10, num: 10 },
+  { label: 'J', val: 10, num: 11 },
+  { label: 'Q', val: 10, num: 12 },
+  { label: 'K', val: 10, num: 13 },
+  { label: 'A', val: 11, num: 14 }
+];
+
+function createShuffledDeck() {
+  const deck = [];
+  for (const s of SUITS) {
+    for (const r of RANKS) {
+      deck.push({ suit: s, label: r.label, val: r.val, num: r.num, held: false });
+    }
+  }
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
+}
+
+function renderCardHTML(card, hidden = false, clickableAttr = '') {
+  if (hidden) {
+    return `<div class="playing-card bg-indigo-950 border-purple-400 items-center justify-center text-2xl text-purple-300">🔮</div>`;
+  }
+  const isRed = card.suit === '♥' || card.suit === '♦';
+  const colorClass = isRed ? 'text-rose-600' : 'text-slate-900';
+  const heldClass = card.held ? 'held' : '';
+  return `
+    <div ${clickableAttr} class="playing-card ${colorClass} ${heldClass}">
+      <div class="text-xs leading-none">${card.label}${card.suit}</div>
+      <div class="text-2xl self-center">${card.suit}</div>
+      <div class="text-[9px] self-end">${card.held ? 'HOLD' : card.label}</div>
+    </div>
+  `;
+}
+
+function openQueenModal() {
+  openModal('queenModal');
+  sfx.play('win');
+  const biome = getStageBiomeInfo(currentLevelNum);
+  document.getElementById('queenModalTitle').textContent = `WORLD ${biome.worldCode} CLEARED! QUEEN AURELIA'S ROYAL CASINO`;
+  setCasinoWager(Math.min(25, Math.max(5, player.coins)));
+  updateQueenCasinoHeader();
+  switchCasinoTab('blackjack');
+}
+
+function updateQueenCasinoHeader() {
+  const spellCount = getUnlockedSpells().filter(s => s.id !== 'pickaxe').length;
+  document.getElementById('queenStakesGold').textContent = player.coins;
+  document.getElementById('queenStakesSpells').textContent = spellCount;
+  document.getElementById('queenStakesGnomes').textContent = `${gnomes.length}/${getMaxGnomeCap()}`;
+  document.getElementById('queenStakesOdds').textContent = `+${player.getLuckBonus()}%`;
+  document.getElementById('casinoBetDisplay').textContent = `${casinoWager} G`;
+}
+
+function setCasinoWager(val) {
+  if (val === 'half') casinoWager = Math.max(1, Math.floor(player.coins / 2));
+  else if (val === 'max') casinoWager = Math.max(1, player.coins);
+  else casinoWager = Math.min(player.coins, val);
+  updateQueenCasinoHeader();
+}
+
+function switchCasinoTab(tabName) {
+  ['blackjack', 'baccarat', 'poker', 'allin'].forEach(t => {
+    const panel = document.getElementById(`casinoTab_${t}`);
+    const btn = document.getElementById(`tabBtn_${t}`);
+    if (t === tabName) {
+      panel.classList.remove('hidden');
+      panel.classList.add('flex');
+      btn.classList.add('ring-2', 'ring-amber-300');
+    } else {
+      panel.classList.add('hidden');
+      panel.classList.remove('flex');
+      btn.classList.remove('ring-2', 'ring-amber-300');
+    }
+  });
+}
+
+/* --- 1. BLACKJACK (21) ENGINE --- */
+let bjDeck = [];
+let bjPlayerHand = [];
+let bjDealerHand = [];
+let bjActive = false;
+let bjCurrentBet = 0;
+
+function calcBlackjackTotal(hand) {
+  let sum = 0;
+  let aces = 0;
+  for (const c of hand) {
+    sum += c.val;
+    if (c.label === 'A') aces++;
+  }
+  while (sum > 21 && aces > 0) {
+    sum -= 10;
+    aces--;
+  }
+  return sum;
+}
+
+function startBlackjackHand() {
+  if (bjActive) return;
+  if (player.coins <= 0 || casinoWager <= 0 || casinoWager > player.coins) {
+    document.getElementById('bjStatusBadge').textContent = 'Not enough Gold Coins for that wager!';
+    return;
+  }
+  bjCurrentBet = casinoWager;
+  player.coins -= bjCurrentBet;
+  bjDeck = createShuffledDeck();
+  bjPlayerHand = [bjDeck.pop(), bjDeck.pop()];
+  bjDealerHand = [bjDeck.pop(), bjDeck.pop()];
+  bjActive = true;
+
+  sfx.play('bolt');
+  renderBlackjackTable(true);
+  updateQueenCasinoHeader();
+
+  if (calcBlackjackTotal(bjPlayerHand) === 21) {
+    finishBlackjackHand();
+  }
+}
+
+function renderBlackjackTable(hideHoleCard) {
+  const dCardsEl = document.getElementById('bjDealerCards');
+  const pCardsEl = document.getElementById('bjPlayerCards');
+  dCardsEl.innerHTML = bjDealerHand.map((c, idx) => renderCardHTML(c, hideHoleCard && idx === 1)).join('');
+  pCardsEl.innerHTML = bjPlayerHand.map(c => renderCardHTML(c, false)).join('');
+
+  document.getElementById('bjDealerScore').textContent = hideHoleCard ? bjDealerHand[0].val + ' + ?' : calcBlackjackTotal(bjDealerHand);
+  document.getElementById('bjPlayerScore').textContent = calcBlackjackTotal(bjPlayerHand);
+
+  document.getElementById('bjDealBtn').disabled = bjActive;
+  document.getElementById('bjHitBtn').disabled = !bjActive;
+  document.getElementById('bjStandBtn').disabled = !bjActive;
+  document.getElementById('bjDoubleBtn').disabled = !bjActive || bjPlayerHand.length !== 2 || player.coins < bjCurrentBet;
+}
+
+function blackjackHit() {
+  if (!bjActive) return;
+  bjPlayerHand.push(bjDeck.pop());
+  sfx.play('bolt');
+  const total = calcBlackjackTotal(bjPlayerHand);
+  renderBlackjackTable(true);
+  if (total >= 21) {
+    finishBlackjackHand();
+  }
+}
+
+function blackjackDouble() {
+  if (!bjActive || player.coins < bjCurrentBet) return;
+  player.coins -= bjCurrentBet;
+  bjCurrentBet *= 2;
+  bjPlayerHand.push(bjDeck.pop());
+  updateQueenCasinoHeader();
+  finishBlackjackHand();
+}
+
+function blackjackStand() {
+  if (!bjActive) return;
+  finishBlackjackHand();
+}
+
+function finishBlackjackHand() {
+  bjActive = false;
+  const pTotal = calcBlackjackTotal(bjPlayerHand);
+  while (pTotal <= 21 && calcBlackjackTotal(bjDealerHand) < 17) {
+    bjDealerHand.push(bjDeck.pop());
+  }
+  const dTotal = calcBlackjackTotal(bjDealerHand);
+  renderBlackjackTable(false);
+
+  const badge = document.getElementById('bjStatusBadge');
+  const isNaturalBJ = pTotal === 21 && bjPlayerHand.length === 2;
+
+  if (pTotal > 21) {
+    sfx.play('lose');
+    badge.innerHTML = `<span class="text-rose-400 font-bold">BUST (${pTotal})! Lost ${bjCurrentBet} G.</span>`;
+  } else if (dTotal > 21 || pTotal > dTotal) {
+    const mult = isNaturalBJ ? 2.5 : 2;
+    const payout = Math.floor(bjCurrentBet * mult);
+    player.coins += payout;
+    sfx.play('win');
+    badge.innerHTML = `<span class="text-amber-300 font-bold">🎉 YOU WIN +${payout} G! (${pTotal} vs ${dTotal})</span>`;
+  } else if (pTotal === dTotal) {
+    player.coins += bjCurrentBet;
+    badge.innerHTML = `<span class="text-sky-300 font-bold">PUSH TIE (${pTotal})! Bet returned.</span>`;
+  } else {
+    sfx.play('lose');
+    badge.innerHTML = `<span class="text-rose-400 font-bold">DEALER WINS (${dTotal} vs ${pTotal}).</span>`;
+  }
+
+  setCasinoWager(Math.min(casinoWager, Math.max(1, player.coins)));
+  updateHUD();
+}
+
+/* --- 2. ROYAL BACCARAT ENGINE --- */
+function calcBaccaratScore(hand) {
+  const sum = hand.reduce((acc, c) => acc + (c.val >= 10 ? 0 : c.val), 0);
+  return sum % 10;
+}
+
+function playBaccarat(betChoice) {
+  if (player.coins <= 0 || casinoWager <= 0 || casinoWager > player.coins) {
+    document.getElementById('bacStatusBadge').textContent = 'Not enough Gold Coins!';
+    return;
+  }
+  const bet = casinoWager;
+  player.coins -= bet;
+
+  const deck = createShuffledDeck();
+  const pHand = [deck.pop(), deck.pop()];
+  const bHand = [deck.pop(), deck.pop()];
+
+  let pVal = calcBaccaratScore(pHand);
+  let bVal = calcBaccaratScore(bHand);
+
+  // Standard 3rd card rule if neither has Natural 8/9
+  if (pVal < 8 && bVal < 8) {
+    if (pVal <= 5) pHand.push(deck.pop());
+    if (bVal <= 5) bHand.push(deck.pop());
+    pVal = calcBaccaratScore(pHand);
+    bVal = calcBaccaratScore(bHand);
+  }
+
+  document.getElementById('bacPlayerCards').innerHTML = pHand.map(c => renderCardHTML(c)).join('');
+  document.getElementById('bacBankerCards').innerHTML = bHand.map(c => renderCardHTML(c)).join('');
+  document.getElementById('bacPlayerVal').textContent = pVal;
+  document.getElementById('bacBankerVal').textContent = bVal;
+
+  const outcome = pVal > bVal ? 'player' : bVal > pVal ? 'banker' : 'tie';
+  const badge = document.getElementById('bacStatusBadge');
+
+  if (betChoice === outcome) {
+    const mult = outcome === 'tie' ? 8 : 2;
+    const payout = bet * mult;
+    player.coins += payout;
+    sfx.play('win');
+    badge.innerHTML = `<span class="text-amber-300 font-bold">🎉 ${outcome.toUpperCase()} WINS! Payout: +${payout} G!</span>`;
+  } else {
+    sfx.play('lose');
+    badge.innerHTML = `<span class="text-rose-400 font-bold">Result: ${outcome.toUpperCase()} (${pVal} to ${bVal}). Lost ${bet} G.</span>`;
+  }
+
+  setCasinoWager(Math.min(casinoWager, Math.max(1, player.coins)));
+  updateHUD();
+}
+
+/* --- 3. 5-CARD DRAW POKER ENGINE --- */
+let pokerDeck = [];
+let pokerHand = [];
+let pokerInDrawPhase = false;
+let pokerBet = 0;
+
+function startPokerHand() {
+  if (pokerInDrawPhase) return;
+  if (player.coins <= 0 || casinoWager <= 0 || casinoWager > player.coins) {
+    document.getElementById('pokerStatusBadge').textContent = 'Not enough Gold Coins!';
+    return;
+  }
+  pokerBet = casinoWager;
+  player.coins -= pokerBet;
+  pokerDeck = createShuffledDeck();
+  pokerHand = [pokerDeck.pop(), pokerDeck.pop(), pokerDeck.pop(), pokerDeck.pop(), pokerDeck.pop()];
+  pokerInDrawPhase = true;
+
+  sfx.play('bolt');
+  document.getElementById('pokerStatusBadge').textContent = 'Click cards you want to HOLD, then click DRAW!';
+  renderPokerCards();
+  updateQueenCasinoHeader();
+}
+
+function togglePokerHold(idx) {
+  if (!pokerInDrawPhase || !pokerHand[idx]) return;
+  pokerHand[idx].held = !pokerHand[idx].held;
+  sfx.play('coin');
+  renderPokerCards();
+}
+
+function renderPokerCards() {
+  const row = document.getElementById('pokerCardsRow');
+  row.innerHTML = pokerHand.map((c, idx) => renderCardHTML(c, false, `onclick="togglePokerHold(${idx})"`)).join('');
+  document.getElementById('pokerDealBtn').disabled = pokerInDrawPhase;
+  document.getElementById('pokerDrawBtn').disabled = !pokerInDrawPhase;
+}
+
+function evaluatePokerHand(hand) {
+  const nums = hand.map(c => c.num).sort((a, b) => a - b);
+  const suits = hand.map(c => c.suit);
+  const isFlush = suits.every(s => s === suits[0]);
+  const isStraight = nums.every((n, i) => i === 0 || n === nums[i - 1] + 1);
+
+  const counts = {};
+  nums.forEach(n => counts[n] = (counts[n] || 0) + 1);
+  const freq = Object.values(counts).sort((a, b) => b - a);
+
+  if (isFlush && isStraight) return { name: 'STRAIGHT FLUSH!', mult: 25 };
+  if (freq[0] === 4) return { name: 'FOUR OF A KIND!', mult: 15 };
+  if (freq[0] === 3 && freq[1] === 2) return { name: 'FULL HOUSE!', mult: 12 };
+  if (isFlush) return { name: 'ROYAL FLUSH / FLUSH!', mult: 7 };
+  if (isStraight) return { name: 'STRAIGHT!', mult: 6 };
+  if (freq[0] === 3) return { name: 'THREE OF A KIND!', mult: 4 };
+  if (freq[0] === 2 && freq[1] === 2) return { name: 'TWO PAIR!', mult: 3 };
+
+  // Jacks or Better Pair (num >= 11 or Clover luck boost)
+  const highPair = Object.entries(counts).some(([n, c]) => c === 2 && parseInt(n, 10) >= 10);
+  if (highPair) return { name: 'HIGH PAIR (10s OR BETTER)!', mult: 2 };
+
+  return { name: 'HIGH CARD (NO WIN)', mult: 0 };
+}
+
+function drawPokerSwap() {
+  if (!pokerInDrawPhase) return;
+  for (let i = 0; i < 5; i++) {
+    if (!pokerHand[i].held) {
+      pokerHand[i] = pokerDeck.pop();
+    }
+    pokerHand[i].held = false;
+  }
+  pokerInDrawPhase = false;
+  renderPokerCards();
+
+  const res = evaluatePokerHand(pokerHand);
+  const badge = document.getElementById('pokerStatusBadge');
+  if (res.mult > 0) {
+    const payout = pokerBet * res.mult;
+    player.coins += payout;
+    sfx.play('win');
+    badge.innerHTML = `<span class="text-amber-300 font-bold">🎉 ${res.name} You won +${payout} G (${res.mult}x)!</span>`;
+  } else {
+    sfx.play('lose');
+    badge.innerHTML = `<span class="text-rose-400 font-bold">${res.name}. Lost ${pokerBet} G. Deal again!</span>`;
+  }
+
+  setCasinoWager(Math.min(casinoWager, Math.max(1, player.coins)));
+  updateHUD();
+}
+
+/* --- 4. ULTIMATE ALL-IN WHEEL OF FATE --- */
+function triggerUltimateAllIn() {
+  const spinBtn = document.getElementById('allInSpinBtn');
+  spinBtn.disabled = true;
+
+  const symbols = ['👑', '🔮', '💎', '🔥', '💀', '🪵'];
+  let ticks = 0;
+  const maxTicks = 24;
+
+  const interval = setInterval(() => {
+    ticks++;
+    sfx.play('bolt');
+    document.getElementById('reel1').textContent = symbols[Math.floor(Math.random() * symbols.length)];
+    document.getElementById('reel2').textContent = symbols[Math.floor(Math.random() * symbols.length)];
+    document.getElementById('reel3').textContent = symbols[Math.floor(Math.random() * symbols.length)];
+
+    if (ticks >= maxTicks) {
+      clearInterval(interval);
+      spinBtn.disabled = false;
+      resolveAllInOutcome();
+    }
+  }, 85);
+}
+
+function resolveAllInOutcome() {
+  const winOdds = Math.min(88, 48 + player.getLuckBonus());
+  const won = (Math.random() * 100) < winOdds;
+
+  if (won) {
+    document.getElementById('reel1').textContent = '👑';
+    document.getElementById('reel2').textContent = '👑';
+    document.getElementById('reel3').textContent = '👑';
+    sfx.play('win');
+    awardTrophy('all_in_victor');
+
+    player.archmageAscended = true;
+    player.brokeStickMode = false;
+    player.coins = (player.coins + 250) * 10;
+    Object.values(SPELL_CATALOG).forEach(s => {
+      if (s.id !== 'stick' && (!s.secret || s.id === 'omega' || secretGunsUnlocked)) s.unlocked = true;
+    });
+    player.activeSpell = 'omega';
+    saveFullGameState(false);
+    renderHotbar();
+    updateHUD();
+    updateQueenCasinoHeader();
+
+    document.getElementById('allInStatusText').innerHTML =
+      `<span class="text-emerald-300 font-bold">🌈 JACKPOT! OMEGA ARCHMAGE BEAM UNLOCKED + 10x GOLD! Click "TAKE QUEEN & ADVANCE WORLD" to vaporize the next biome!</span>`;
+  } else {
+    document.getElementById('reel1').textContent = '💀';
+    document.getElementById('reel2').textContent = '🪵';
+    document.getElementById('reel3').textContent = '💀';
+    sfx.play('lose');
+
+    player.coins = 0;
+    player.relics = [];
+    player.archmageAscended = false;
+    player.brokeStickMode = true;
+    Object.values(SPELL_CATALOG).forEach(s => {
+      s.unlocked = (s.id === 'pickaxe' || s.id === 'stick');
+    });
+    player.activeSpell = 'stick';
+
+    // Respawn Troll King for round 2!
+    const finalCastle = castles[castles.length - 1];
+    finalCastle.cleared = false;
+    trolls.push(new Troll((finalCastle.startX + 16) * TILE_SIZE, (GROUND_Y - 5) * TILE_SIZE, 'king', finalCastle.index));
+
+    renderHotbar();
+    updateHUD();
+    closeModals();
+    addFloatingText(player.x, player.y - 30, 'ALL-IN BUST! LOST SPELLS & GOLD! TROLL KING RETURNED!', '#f43f5e');
+  }
+}
+
+function showSummaryModal(icon, title, subtitle, isVictory) {
+  openModal('summaryModal');
+  document.getElementById('summaryIcon').textContent = icon;
+  document.getElementById('summaryTitle').textContent = title;
+  document.getElementById('summarySubtitle').textContent = subtitle;
+  document.getElementById('summaryNextLevelBtn').style.display = isVictory && currentLevelNum < TOTAL_STAGES ? 'inline-block' : 'none';
+
+  const resetBtn = document.getElementById('summaryResetBtn');
+  if (resetBtn) {
+    if (isVictory) {
+      resetBtn.classList.remove('hidden');
+      resetBtn.textContent = currentLevelNum >= TOTAL_STAGES
+        ? '🔄 RESET CAMPAIGN & PLAY AGAIN (1-1)'
+        : '🔄 RESET RUN TO WORLD 1-1';
+    } else {
+      resetBtn.classList.add('hidden');
+    }
+  }
+
+  const clearedCount = castles.filter(c => c.cleared).length;
+  const biome = getStageBiomeInfo(currentLevelNum);
+  document.getElementById('summaryStats').innerHTML = `
+    <div>🗺️ <strong>Stage:</strong> World ${biome.worldCode} (${biome.shortName})</div>
+    <div>⚔️ <strong>Difficulty:</strong> ${DIFFICULTY_TIERS[selectedDifficultyId].name}</div>
+    <div>🏰 <strong>Castles Cleared:</strong> ${clearedCount} / ${castles.length}</div>
+    <div>🧝 <strong>Gnome Squad:</strong> ${gnomes.length} / ${getMaxGnomeCap()} Companions</div>
+    <div>💰 <strong>Gold Pouch:</strong> ${player.coins} Coins</div>
+  `;
+}
+
+/* ============================================================================
+   HUD, HOTBAR & MINIMAP RENDERING
+   ============================================================================ */
+function getUnlockedSpells() {
+  return Object.values(SPELL_CATALOG).filter(s => s.unlocked);
+}
+
+function selectHotbarIndex(idx) {
+  const unlocked = getUnlockedSpells();
+  if (idx >= 0 && idx < unlocked.length) {
+    player.activeSpell = unlocked[idx].id;
+    renderHotbar();
+  }
+}
+
+function renderHotbar() {
+  const bar = document.getElementById('spellHotbar');
+  if (!bar || !player) return;
+  bar.innerHTML = '';
+  const unlocked = getUnlockedSpells();
+
+  unlocked.forEach((sp, idx) => {
+    const active = player.activeSpell === sp.id;
+    const btn = document.createElement('button');
+    btn.className = `flex flex-col items-center justify-center px-2.5 py-1.5 min-w-[64px] sm:min-w-[74px] border-2 transition-all ${
+      active
+        ? 'bg-amber-500/25 border-amber-400 scale-105 shadow-md'
+        : 'bg-slate-900/90 border-slate-700 hover:border-slate-500'
+    }`;
+    btn.onclick = () => {
+      player.activeSpell = sp.id;
+      renderHotbar();
+    };
+    btn.innerHTML = `
+      <div class="flex items-center justify-between w-full text-[9px] text-slate-400 pixel-font">
+        <span>[${idx + 1}]</span>
+        <span class="text-cyan-400">${sp.mana > 0 ? sp.mana + 'M' : ''}</span>
+      </div>
+      <div class="text-xl my-0.5">${sp.icon}</div>
+      <div class="text-[11px] text-slate-200 truncate max-w-[68px]">${sp.name.split(' ')[0]}</div>
+    `;
+    bar.appendChild(btn);
+  });
+}
+
+function updateHUD() {
+  if (!player) return;
+  if (player.coins >= 1000) awardTrophy('high_roller');
+  const biome = getStageBiomeInfo(currentLevelNum);
+  const hudWorldEl = document.getElementById('hudWorldLabel');
+  if (hudWorldEl) hudWorldEl.textContent = `WORLD ${biome.worldCode} (${DIFFICULTY_TIERS[selectedDifficultyId].name})`;
+  const minimapTitleEl = document.getElementById('minimapBiomeTitle');
+  if (minimapTitleEl) minimapTitleEl.textContent = `${biome.icon} WORLD ${biome.worldCode}: ${biome.shortName.toUpperCase()}`;
+
+  document.getElementById('coinCount').textContent = player.coins;
+  document.getElementById('gnomeCountHud').textContent = `${gnomes.length}/${getMaxGnomeCap()}`;
+  document.getElementById('blockCount').textContent = player.blocks;
+
+  const hpPct = Math.max(0, Math.min(100, (player.hp / player.maxHp) * 100));
+  document.getElementById('hpBar').style.width = `${hpPct}%`;
+  document.getElementById('hpText').textContent = `${Math.ceil(player.hp)} / ${player.maxHp} HP`;
+
+  const mpPct = Math.max(0, Math.min(100, (player.mana / player.maxMana) * 100));
+  document.getElementById('manaBar').style.width = `${mpPct}%`;
+  document.getElementById('manaText').textContent = `${Math.floor(player.mana)} / ${player.maxMana} MP`;
+
+  const relicBar = document.getElementById('relicBar');
+  relicBar.innerHTML = `<span class="text-xs text-slate-400 mr-1">Relics:</span>`;
+  if (player.relics.length === 0) {
+    relicBar.innerHTML += `<span class="text-xs text-slate-500 italic">None</span>`;
+  } else {
+    player.relics.forEach(r => {
+      const badge = document.createElement('span');
+      badge.className = 'text-sm bg-slate-800 border border-slate-600 px-1 rounded cursor-help';
+      badge.title = `${r.name}: ${r.desc}`;
+      badge.textContent = r.icon;
+      relicBar.appendChild(badge);
+    });
+  }
+
+  // Only show the Talk to Gnome button when you actually have at least 1 Gnome ally!
+  const talkBtn = document.getElementById('talkGnomeBtn');
+  const touchTalkBtn = document.getElementById('touchTalk');
+  if (talkBtn) {
+    if (gnomes.length > 0) talkBtn.classList.remove('hidden');
+    else talkBtn.classList.add('hidden');
+  }
+  if (touchTalkBtn) {
+    if (gnomes.length > 0) touchTalkBtn.classList.remove('hidden');
+    else touchTalkBtn.classList.add('hidden');
+  }
+
+  const clearedCount = castles.filter(c => c.cleared).length;
+  const castleCounterEl = document.getElementById('castleCounterText');
+  if (castleCounterEl) castleCounterEl.textContent = `CASTLES: ${clearedCount} / ${castles.length}`;
+}
+
+function buildMinimapDOM() {
+  const container = document.getElementById('minimapContainer');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const groundStrip = document.createElement('div');
+  groundStrip.className = 'absolute bottom-0 left-0 right-0 h-1.5 bg-emerald-800';
+  container.appendChild(groundStrip);
+
+  castles.forEach(c => {
+    const pct = ((c.startX + 16) / worldWidth) * 100;
+    const marker = document.createElement('div');
+    marker.id = `minimapCastle_${c.index}`;
+    marker.className = 'absolute bottom-1 transform -translate-x-1/2 text-xs';
+    marker.style.left = `${pct}%`;
+    marker.textContent = c.isFinal ? '👑' : '🏰';
+    container.appendChild(marker);
+  });
+
+  interactables.forEach(obj => {
+    if (obj.type === 'gambleShrine' || obj.type === 'villageShop') {
+      const pct = ((obj.x / TILE_SIZE) / worldWidth) * 100;
+      const m = document.createElement('div');
+      m.className = 'absolute bottom-1 transform -translate-x-1/2 text-[10px] opacity-85';
+      m.style.left = `${pct}%`;
+      m.textContent = obj.type === 'gambleShrine' ? '🎲' : '🏘️';
+      container.appendChild(m);
+    }
+  });
+
+  const pHead = document.createElement('div');
+  pHead.id = 'minimapPlayerHead';
+  pHead.className = 'absolute top-0.5 transform -translate-x-1/2 text-xs transition-all duration-75';
+  pHead.textContent = '🧙‍♂️';
+  container.appendChild(pHead);
+}
+
+function updateMinimapMarker() {
+  const pHead = document.getElementById('minimapPlayerHead');
+  if (!pHead || !player) return;
+  const pct = Math.max(2, Math.min(98, ((player.x / TILE_SIZE) / worldWidth) * 100));
+  pHead.style.left = `${pct}%`;
+
+  castles.forEach(c => {
+    const el = document.getElementById(`minimapCastle_${c.index}`);
+    if (el && c.cleared) {
+      el.textContent = '✅';
+    }
+  });
+}
+
+/* ============================================================================
+   RENDERING ENGINE (PARALLAX BIOME SKY, TILES, ENTITIES, LIGHTING)
+   ============================================================================ */
+function renderWorld() {
+  const biome = getStageBiomeInfo(currentLevelNum);
+
+  // 1. Dynamic Biome Sky Gradient
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  skyGrad.addColorStop(0, biome.skyTop);
+  skyGrad.addColorStop(1, biome.skyBot);
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Twinkling Stars / Spores / Embers
+  ctx.fillStyle = '#e2e8f0';
+  for (let i = 0; i < 36; i++) {
+    const sx = ((i * 197 - camera.x * 0.08) % canvas.width + canvas.width) % canvas.width;
+    const sy = (i * 73) % (canvas.height * 0.55);
+    ctx.fillRect(sx, sy, 2, 2);
+  }
+
+  // Celestial Pixel Moon (Click 7 times in-game to unlock the Secret Firearms Drop!)
+  const moonX = canvas.width - 90;
+  const moonY = 82;
+  ctx.fillStyle = moonClickCount >= 7 ? '#f43f5e' : '#fef08a';
+  ctx.fillRect(moonX - 18, moonY - 18, 36, 36);
+  ctx.fillStyle = '#fde047';
+  ctx.fillRect(moonX - 10, moonY - 10, 8, 8);
+  ctx.fillRect(moonX + 4, moonY + 2, 6, 6);
+
+  ctx.save();
+  ctx.translate(-Math.floor(camera.x), -Math.floor(camera.y));
+
+  // 2. Background Biome Trees / Pillars
+  for (const tr of backgroundTrees) {
+    if (tr.x + 80 < camera.x || tr.x - 80 > camera.x + canvas.width) continue;
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(tr.x - 6, tr.y - tr.h, 12, tr.h);
+    ctx.fillStyle = biome.treeLeaves;
+    ctx.fillRect(tr.x - 26, tr.y - tr.h - 18, 52, 26);
+    ctx.fillRect(tr.x - 18, tr.y - tr.h - 34, 36, 18);
+  }
+
+  // 3. Tilemap
+  const startCol = Math.max(0, Math.floor(camera.x / TILE_SIZE) - 1);
+  const endCol = Math.min(worldWidth - 1, Math.ceil((camera.x + canvas.width) / TILE_SIZE) + 1);
+  const startRow = Math.max(0, Math.floor(camera.y / TILE_SIZE) - 1);
+  const endRow = Math.min(WORLD_HEIGHT - 1, Math.ceil((camera.y + canvas.height) / TILE_SIZE) + 1);
+
+  for (let y = startRow; y <= endRow; y++) {
+    for (let x = startCol; x <= endCol; x++) {
+      const t = tileMap[y][x];
+      if (t === TILES.AIR) continue;
+      const px = x * TILE_SIZE;
+      const py = y * TILE_SIZE;
+
+      if (t === TILES.CASTLE_BG) {
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+        ctx.strokeStyle = '#0f172a';
+        ctx.strokeRect(px, py, TILE_SIZE, TILE_SIZE);
+      } else if (t === TILES.GRASS) {
+        ctx.fillStyle = biome.dirtColor;
+        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+        ctx.fillStyle = biome.grassColor;
+        ctx.fillRect(px, py, TILE_SIZE, 6);
+      } else if (t === TILES.DIRT) {
+        ctx.fillStyle = biome.dirtColor;
+        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+      } else if (t === TILES.STONE) {
+        ctx.fillStyle = biome.stoneColor;
+        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+      } else if (t === TILES.CASTLE_BRICK) {
+        ctx.fillStyle = biome.brickColor;
+        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+        ctx.strokeStyle = '#0f172a';
+        ctx.strokeRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+      } else if (t === TILES.IRON_DOOR) {
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(px + 4, py, TILE_SIZE - 8, TILE_SIZE);
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillRect(px + 8, py + 10, 4, 4);
+      } else if (t === TILES.WOOD_PLATFORM) {
+        ctx.fillStyle = '#b45309';
+        ctx.fillRect(px, py, TILE_SIZE, 7);
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(px + 2, py + 2, TILE_SIZE - 4, 3);
+      } else if (t === TILES.TORCH) {
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+        ctx.fillStyle = '#92400e';
+        ctx.fillRect(px + 10, py + 10, 4, 10);
+        ctx.fillStyle = (frameCount % 12 < 6) ? '#facc15' : '#f97316';
+        ctx.fillRect(px + 9, py + 4, 6, 6);
+      } else if (t === TILES.BEDROCK) {
+        ctx.fillStyle = '#020617';
+        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+      }
+    }
+  }
+
+  // 4. Interactables (Chests, Gnome Camps, Gamble Shrines, Villages, Queen Cage)
+  for (const obj of interactables) {
+    if (obj.x + 120 < camera.x || obj.x - 120 > camera.x + canvas.width) continue;
+
+    if (obj.type === 'relicChest') {
+      ctx.fillStyle = obj.used ? '#475569' : '#d97706';
+      ctx.fillRect(obj.x, obj.y + 4, 24, 20);
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(obj.x + 9, obj.y + 10, 6, 6);
+      if (!obj.used) {
+        ctx.fillStyle = '#fde047';
+        ctx.font = '12px monospace';
+        ctx.fillText('RELIC', obj.x - 4, obj.y - 4);
+      }
+    } else if (obj.type === 'gnomeCamp') {
+      if (!obj.used) {
+        const spec = GNOME_CLASSES[obj.roleKey] || GNOME_CLASSES.pikeman;
+        ctx.fillStyle = '#065f46';
+        ctx.fillRect(obj.x - 6, obj.y - 8, 36, 32);
+        ctx.fillStyle = spec.hatColor;
+        ctx.fillRect(obj.x + 6, obj.y - 4, 12, 10);
+        ctx.fillStyle = '#a7f3d0';
+        ctx.font = '12px monospace';
+        ctx.fillText(`🧝 HIRE (${spec.cost}G)`, obj.x - 24, obj.y - 14);
+      }
+    } else if (obj.type === 'gambleShrine') {
+      ctx.fillStyle = '#7c2d12';
+      ctx.fillRect(obj.x - 8, obj.y - 18, 44, 42);
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(obj.x - 12, obj.y - 24, 52, 8);
+      ctx.fillStyle = '#fde047';
+      ctx.font = '13px monospace';
+      ctx.fillText('🎲 GAMBLE', obj.x - 16, obj.y - 30);
+    } else if (obj.type === 'villageShop') {
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(obj.x - 10, obj.y - 22, 48, 46);
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(obj.x - 14, obj.y - 28, 56, 8);
+      ctx.fillStyle = '#67e8f9';
+      ctx.font = '13px monospace';
+      ctx.fillText('🏘️ VILLAGE & GNOMES', obj.x - 36, obj.y - 34);
+    } else if (obj.type === 'decoyCage' || obj.type === 'queenCage') {
+      const isQueen = obj.type === 'queenCage';
+      if (!obj.used) {
+        ctx.fillStyle = isQueen ? '#ec4899' : '#a855f7';
+        ctx.fillRect(obj.x + 8, obj.y + 10, 12, 18);
+        ctx.fillStyle = '#fde047';
+        ctx.fillRect(obj.x + 9, obj.y + 4, 10, 6);
+      }
+      ctx.fillStyle = '#94a3b8';
+      for (let b = 0; b <= 24; b += 6) {
+        ctx.fillRect(obj.x + b, obj.y, 2, 28);
+      }
+      ctx.fillRect(obj.x, obj.y, 26, 3);
+      ctx.fillStyle = isQueen ? '#f472b6' : '#cbd5e1';
+      ctx.font = '12px monospace';
+      ctx.fillText(isQueen ? '👑 QUEEN AURELIA' : '🔒 CAPTIVE', obj.x - 24, obj.y - 8);
+    }
+  }
+
+  // 5. Coins
+  for (const c of coins) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(c.x - 4, c.y - 4, 8, 8);
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(c.x - 2, c.y - 2, 3, 3);
+  }
+
+  // 6. Hired Gnome Companions
+  for (const g of gnomes) {
+    g.draw(ctx);
+  }
+
+  // 7. Trolls (Grunts, Throwers, Chieftains & Troll King)
+  for (const tr of trolls) {
+    tr.draw(ctx);
+  }
+
+  // 8. Wizard Player & Aim Reticle
+  if (player) {
+    player.draw(ctx);
+    if (showAimReticle) {
+      ctx.strokeStyle = controlScheme === 'keyboard' ? '#fbbf24' : 'rgba(251, 191, 36, 0.65)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(mouse.worldX - 6, mouse.worldY - 6, 12, 12);
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(mouse.worldX - 1, mouse.worldY - 1, 2, 2);
+    }
+  }
+
+  // 9. Projectiles
+  for (const p of projectiles) {
+    ctx.fillStyle = p.color;
+    const sz = p.spellId === 'fireball' || p.spellId === 'meteor' || p.spellId === 'omega' ? 9 : 6;
+    ctx.fillRect(p.x - sz / 2, p.y - sz / 2, sz, sz);
+  }
+
+  // 10. Particles
+  for (const pt of particles) {
+    ctx.fillStyle = pt.color;
+    ctx.fillRect(pt.x, pt.y, pt.size, pt.size);
+  }
+
+  // 11. Floating Combat Text
+  for (const ft of floatingTexts) {
+    ctx.font = 'bold 14px monospace';
+    ctx.fillStyle = '#000000';
+    ctx.fillText(ft.text, ft.x + 1, ft.y + 1);
+    ctx.fillStyle = ft.color;
+    ctx.fillText(ft.text, ft.x, ft.y);
+  }
+
+  ctx.restore();
+}
+
+/* ============================================================================
+   MAIN GAME LOOP
+   ============================================================================ */
+function gameLoop() {
+  frameCount++;
+
+  const menuHidden = document.getElementById('mainMenuOverlay').classList.contains('hidden');
+  const nesHidden = document.getElementById('nesTransitionOverlay').classList.contains('hidden');
+
+  if (!activeModal && menuHidden && nesHidden && player) {
+    player.update();
+    for (const g of gnomes) g.update();
+    for (const tr of trolls) tr.update();
+    updateProjectiles();
+    updateCoinsAndParticles();
+
+    const targetCamX = player.x + player.w / 2 - canvas.width / 2;
+    const targetCamY = player.y + player.h / 2 - canvas.height * 0.56;
+    camera.x += (targetCamX - camera.x) * 0.14;
+    camera.y += (targetCamY - camera.y) * 0.14;
+    camera.x = Math.max(0, Math.min(worldWidth * TILE_SIZE - canvas.width, camera.x));
+    camera.y = Math.max(0, Math.min(WORLD_HEIGHT * TILE_SIZE - canvas.height, camera.y));
+
+    if (controlScheme === 'mouse') {
+      mouse.worldX = mouse.x + camera.x;
+      mouse.worldY = mouse.y + camera.y;
+    }
+
+    const near = getNearestInteractable();
+    const promptEl = document.getElementById('interactPrompt');
+    const promptTxt = document.getElementById('interactPromptText');
+    if (near) {
+      promptEl.classList.remove('hidden');
+      if (near.type === 'relicChest') promptTxt.textContent = '[E] OPEN ANCIENT RELIC CHEST';
+      else if (near.type === 'gnomeCamp') promptTxt.textContent = '[E] HIRE GNOME COMPANION';
+      else if (near.type === 'gambleShrine') promptTxt.textContent = '[E] ENTER GOBLIN GAMBLE TAVERN';
+      else if (near.type === 'villageShop') promptTxt.textContent = '[E] VISIT VILLAGE BAZAAR & GNOME BARRACKS';
+      else if (near.type === 'decoyCage') promptTxt.textContent = '[E] UNLOCK CAPTIVE CAGE';
+      else if (near.type === 'queenCage') promptTxt.textContent = '[E] RESCUE QUEEN AURELIA & OPEN ROYAL CASINO!';
+    } else {
+      promptEl.classList.add('hidden');
+    }
+
+    if (frameCount % 12 === 0) {
+      updateHUD();
+      updateMinimapMarker();
+    }
+  }
+
+  renderWorld();
+  requestAnimationFrame(gameLoop);
+}
+
+window.onload = function () {
+  loadSavedData();
+  renderMainMenuUI();
+  renderFeedbackBoard();
+  // Generate background preview world behind Main Menu
+  player = new Wizard(6 * TILE_SIZE, (GROUND_Y - 3) * TILE_SIZE);
+  generateBiomeWorld(1);
+  requestAnimationFrame(gameLoop);
+};
+</script>
+</body>
+</html>
